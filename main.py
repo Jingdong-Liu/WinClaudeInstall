@@ -119,52 +119,93 @@ class InstallerApp:
                   bordercolor=[("active", TEXT_MUTED)])
 
     def _build_ui(self):
-        """Build the two-column layout with bottom button bar."""
+        """Build the beautified two-column layout."""
+        self.root.configure(background=BG)
+        self.root.geometry("900x560")
+        self.root.minsize(750, 450)
+
+        # Main layout: 3 rows (header, content, bottom)
+        self.root.rowconfigure(0, weight=0)
+        self.root.rowconfigure(1, weight=1)
+        self.root.rowconfigure(2, weight=0)
         self.root.columnconfigure(0, weight=1)
-        self.root.columnconfigure(1, weight=2)
-        self.root.rowconfigure(0, weight=1)
 
-        left_frame = ttk.Frame(self.root, padding=10)
-        left_frame.grid(row=0, column=0, sticky="nsew")
+        # Header Bar
+        header = ttk.Frame(self.root, style="Header.TFrame")
+        header.grid(row=0, column=0, sticky="ew")
 
-        ttk.Label(left_frame, text="Environment Check", font=("", 11, "bold")).pack(anchor="w")
+        icon_frame = tk.Frame(header, bg=BUTTON_BG, width=36, height=36)
+        icon_frame.pack_propagate(False)
+        icon_frame.pack(side="left", padx=(24, 12), pady=16)
 
-        columns = ("status", "name", "detail")
-        self.tree = ttk.Treeview(left_frame, columns=columns, show="headings", height=12)
-        self.tree.heading("status", text="")
-        self.tree.heading("name", text="Component")
-        self.tree.heading("detail", text="Status")
-        self.tree.column("status", width=30, anchor="center")
-        self.tree.column("name", width=120)
-        self.tree.column("detail", width=150)
-        self.tree.pack(fill="both", expand=True, pady=5)
+        tk.Label(icon_frame, text="C", bg=BUTTON_BG, fg="white",
+                 font=("Segoe UI", 16, "bold")).pack(expand=True)
 
-        for status, color in STATUS_COLORS.items():
-            self.tree.tag_configure(status, foreground=color)
+        title_frame = tk.Frame(header, bg=HEADER_BG_START)
+        title_frame.pack(side="left", fill="y", pady=16)
 
-        ttk.Button(left_frame, text="Refresh", command=self._auto_detect).pack(anchor="w", pady=5)
+        tk.Label(title_frame, text="Claude Code Installer", bg=HEADER_BG_START,
+                 fg=TEXT_PRIMARY, font=FONT_TITLE).pack(anchor="w")
+        tk.Label(title_frame, text="一键安装环境检测与执行", bg=HEADER_BG_START,
+                 fg=TEXT_MUTED, font=("Segoe UI", 12)).pack(anchor="w")
 
-        right_frame = ttk.Frame(self.root, padding=10)
-        right_frame.grid(row=0, column=1, sticky="nsew")
+        # Separator at bottom of header
+        tk.Frame(self.root, height=1, bg=BORDER).grid(row=0, column=0, sticky="ew")
 
-        ttk.Label(right_frame, text="Installation Log", font=("", 11, "bold")).pack(anchor="w")
+        # Content Area (two columns)
+        content_frame = ttk.Frame(self.root)
+        content_frame.grid(row=1, column=0, sticky="nsew")
+        content_frame.columnconfigure(0, weight=1)
+        content_frame.columnconfigure(1, weight=2)
+        content_frame.rowconfigure(0, weight=1)
 
-        self.log_text = tk.Text(right_frame, state="disabled", wrap="word", font=("", 9))
-        self.log_text.pack(fill="both", expand=True, pady=5)
+        # Left Panel
+        left_frame = ttk.Frame(content_frame)
+        left_frame.grid(row=0, column=0, sticky="nsew", padx=(PADDING_WINDOW, 8), pady=PADDING_WINDOW)
+
+        ttk.Label(left_frame, text="ENVIRONMENT CHECK", style="Section.TLabel").pack(anchor="w", pady=(0, 8))
+
+        # Container for detector cards
+        self.cards_frame = ttk.Frame(left_frame)
+        self.cards_frame.pack(fill="both", expand=True)
+
+        # Refresh button
+        ttk.Button(left_frame, text="Refresh", style="Refresh.TButton",
+                   command=self._auto_detect).pack(anchor="w", pady=(8, 0))
+
+        # Right Panel
+        right_frame = ttk.Frame(content_frame)
+        right_frame.grid(row=0, column=1, sticky="nsew", padx=(8, PADDING_WINDOW), pady=PADDING_WINDOW)
+
+        ttk.Label(right_frame, text="INSTALLATION LOG", style="Section.TLabel").pack(anchor="w", pady=(0, 8))
+
+        # Log container with white background
+        self.log_container = tk.Frame(right_frame, bg=CARD_BG, highlightbackground=BORDER, highlightthickness=1)
+        self.log_container.pack(fill="both", expand=True)
+
+        self.log_text = tk.Text(self.log_container, state="disabled", wrap="word",
+                                 font=FONT_LOG, bg=CARD_BG, fg=TEXT_SECONDARY,
+                                 borderwidth=0, highlightthickness=0, padx=14, pady=14)
+        self.log_text.pack(fill="both", expand=True)
 
         scrollbar = ttk.Scrollbar(self.log_text, command=self.log_text.yview)
         scrollbar.pack(side="right", fill="y")
         self.log_text.configure(yscrollcommand=scrollbar.set)
 
-        bottom_frame = ttk.Frame(self.root, padding=10)
-        bottom_frame.grid(row=1, column=0, columnspan=2)
+        # Bottom Bar
+        bottom_frame = ttk.Frame(self.root, style="Bottom.TFrame")
+        bottom_frame.grid(row=2, column=0, sticky="ew")
+        tk.Frame(bottom_frame, height=1, bg=BORDER).pack(fill="x")
 
-        self.install_btn = ttk.Button(
-            bottom_frame,
-            text="\U0001f680 One-Click Install",
-            command=self._start_install,
-        )
-        self.install_btn.pack(pady=5)
+        self.install_btn = tk.Button(self.root, text="One-Click Install",
+                                      bg=BUTTON_BG, fg="white", font=FONT_BTN,
+                                      activebackground=BUTTON_SHADOW, activeforeground="white",
+                                      bd=0, relief="flat", cursor="hand2",
+                                      padx=48, pady=12)
+        self.install_btn.grid(row=2, column=0, pady=8)
+
+        # Store card widgets for later updates
+        self._card_widgets: list = []
 
     def _log(self, message: str):
         """Append message to the log panel (thread-safe)."""
