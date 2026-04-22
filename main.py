@@ -1,7 +1,7 @@
 """Claude Code Installer — Main GUI Entry Point."""
 
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, font as tk_font
 import threading
 
 from detectors import (
@@ -20,15 +20,56 @@ DETECTORS = [
     NpmDetector,
 ]
 
+# ── Color Palette ──────────────────────────────────────────
+BG = "#f8fafc"          # Main background
+CARD_BG = "#ffffff"     # Card background
+BORDER = "#e2e8f0"      # Standard border
+HEADER_BG_START = "#f8fafc"
+HEADER_BG_END = "#e8ecf1"
+TEXT_PRIMARY = "#1e293b"
+TEXT_SECONDARY = "#475569"
+TEXT_MUTED = "#94a3b8"
+OK_COLOR = "#22c55e"
+MISSING_COLOR = "#ef4444"
+WARNING_COLOR = "#f59e0b"
+MISSING_BORDER = "#fca5a5"
+WARNING_BORDER = "#fcd34d"
+BUTTON_BG = "#4f63e3"    # Midpoint of blue-indigo gradient
+BUTTON_SHADOW = "#3b82f6"
+
+# ── Font Config ────────────────────────────────────────────
+FONT_BODY = ("Segoe UI", 10, "normal")
+FONT_BODY_BOLD = ("Segoe UI", 10, "bold")
+FONT_TITLE = ("Segoe UI", 18, "bold")
+FONT_SUBTITLE = ("Segoe UI", 12, "normal")
+FONT_LABEL = ("Segoe UI", 13, "bold")
+FONT_SECTION = ("Segoe UI", 11, "bold")
+FONT_LOG = ("Cascadia Mono", 12, "normal")
+FONT_LOG_FALLBACK = ("Consolas", 12, "normal")
+FONT_CARD_NAME = ("Segoe UI", 13, "bold")
+FONT_CARD_DETAIL = ("Segoe UI", 12, "normal")
+FONT_BTN = ("Segoe UI", 14, "bold")
+
+# ── Spacing ────────────────────────────────────────────────
+PADDING_WINDOW = 16
+PADDING_CARD = (10, 14)
+CARD_GAP = 6
+
+# ── Status Display ─────────────────────────────────────────
 STATUS_ICONS = {
-    Status.OK: "✓",
-    Status.MISSING: "✗",
-    Status.WARNING: "⚠",
+    "ok": "✓",
+    "missing": "✗",
+    "warning": "⚠",
+}
+STATUS_BORDER_COLORS = {
+    "ok": BORDER,
+    "missing": MISSING_BORDER,
+    "warning": WARNING_BORDER,
 }
 STATUS_COLORS = {
-    Status.OK: "#22c55e",
-    Status.MISSING: "#ef4444",
-    Status.WARNING: "#f59e0b",
+    "ok": OK_COLOR,
+    "missing": MISSING_COLOR,
+    "warning": WARNING_COLOR,
 }
 
 
@@ -69,7 +110,7 @@ class InstallerApp:
         self.tree.pack(fill="both", expand=True, pady=5)
 
         for status, color in STATUS_COLORS.items():
-            self.tree.tag_configure(status.value, foreground=color)
+            self.tree.tag_configure(status, foreground=color)
 
         ttk.Button(left_frame, text="Refresh", command=self._auto_detect).pack(anchor="w", pady=5)
 
@@ -119,7 +160,8 @@ class InstallerApp:
                     det = det_cls()
                     status, detail = det.detect()
                     self.results.append((det.name, status, detail))
-                    self._log(f"  [{STATUS_ICONS[status]}] {det.name}: {detail}")
+                    status_key = status.value if hasattr(status, 'value') else str(status).lower()
+                self._log(f"  [{STATUS_ICONS[status_key]}] {det.name}: {detail}")
 
                 self.root.after(0, self._update_tree)
                 self.root.after(0, self._on_detection_complete)
@@ -132,7 +174,10 @@ class InstallerApp:
 
     def _on_detection_complete(self):
         """Enable install button only if issues were found."""
-        has_issues = any(s in (Status.MISSING, Status.WARNING) for _, s, _ in self.results)
+        has_issues = any(
+            (s.value if hasattr(s, 'value') else str(s).lower()) in ("missing", "warning")
+            for _, s, _ in self.results
+        )
         self.install_btn.configure(state="normal" if has_issues else "disabled")
         self._detecting = False
 
@@ -140,19 +185,22 @@ class InstallerApp:
         """Populate the treeview with detection results."""
         self.tree.delete(*self.tree.get_children())
         for name, status, detail in self.results:
-            icon = STATUS_ICONS[status]
-            self.tree.insert("", "end", values=(icon, name, detail), tags=(status.value,))
+            status_key = status.value if hasattr(status, 'value') else str(status).lower()
+            icon = STATUS_ICONS[status_key]
+            self.tree.insert("", "end", values=(icon, name, detail), tags=(status_key,))
 
     def _start_install(self):
         """Handle one-click install button."""
-        missing = [(n, s, d) for n, s, d in self.results if s in (Status.MISSING, Status.WARNING)]
+        missing = [(n, s, d) for n, s, d in self.results
+                    if (s.value if hasattr(s, 'value') else str(s).lower()) in ("missing", "warning")]
         if not missing:
             messagebox.showinfo("All Good", "All dependencies are installed and up to date!")
             return
 
         lines = ["The following components need installation:"]
         for name, status, detail in missing:
-            lines.append(f"  {STATUS_ICONS[status]} {name}: {detail}")
+            status_key = status.value if hasattr(status, 'value') else str(status).lower()
+            lines.append(f"  {STATUS_ICONS[status_key]} {name}: {detail}")
         lines.append("\nProceed with installation?")
 
         if not messagebox.askokcancel("Confirm Install", "\n".join(lines)):
