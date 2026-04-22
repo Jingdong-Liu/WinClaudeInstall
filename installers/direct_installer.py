@@ -28,6 +28,10 @@ class DirectInstaller(Installer):
     def priority(self) -> int:
         return 3
 
+    @property
+    def target(self) -> str:
+        return self._dependency
+
     def install(self, log_callback) -> bool:
         url = INSTALLER_URLS.get(self._dependency)
         if not url:
