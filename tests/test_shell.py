@@ -29,3 +29,9 @@ def test_run_stream_success():
     code = run_stream("echo hello", lambda line: lines.append(line))
     assert code == 0
     assert any("hello" in line for line in lines)
+
+def test_run_stream_timeout():
+    lines = []
+    code = run_stream("sleep 30", lambda line: lines.append(line), timeout=1)
+    assert code == -1
+    assert any("timed out" in line.lower() for line in lines)

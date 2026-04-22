@@ -33,6 +33,10 @@ def run_stream(cmd: str, log_callback, cwd=None, timeout=300) -> int:
         if reader.is_alive():
             proc.kill()
             reader.join(timeout=5)
+            try:
+                proc.wait()
+            except Exception:
+                pass
             if log_callback:
                 log_callback(f"ERROR: Command timed out after {timeout}s")
             logger.warning(f"Command timed out: {cmd}")
