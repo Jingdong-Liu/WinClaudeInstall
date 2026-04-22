@@ -253,12 +253,43 @@ class InstallerApp:
         self._detecting = False
 
     def _update_tree(self):
-        """Populate the treeview with detection results."""
-        self.tree.delete(*self.tree.get_children())
+        """Render detector results as styled cards."""
+        for widget in self._card_widgets:
+            widget.destroy()
+        self._card_widgets.clear()
+
         for name, status, detail in self.results:
-            status_key = status.value if hasattr(status, 'value') else str(status).lower()
-            icon = STATUS_ICONS[status_key]
-            self.tree.insert("", "end", values=(icon, name, detail), tags=(status_key,))
+            status_str = status.value if hasattr(status, 'value') else str(status).lower()
+            self._create_card(name, status_str, detail)
+
+    def _create_card(self, name: str, status: str, detail: str):
+        """Create a single detector card widget."""
+        icon = STATUS_ICONS.get(status, "?")
+        border_color = STATUS_BORDER_COLORS.get(status, BORDER)
+        text_color = STATUS_COLORS.get(status, TEXT_SECONDARY)
+
+        # Card frame with colored border
+        card = tk.Frame(self.cards_frame, bg=CARD_BG,
+                         highlightbackground=border_color, highlightthickness=1,
+                         relief="flat")
+        card.pack(fill="x", pady=(0, CARD_GAP))
+        self._card_widgets.append(card)
+
+        # Inner frame for padding
+        inner = tk.Frame(card, bg=CARD_BG)
+        inner.pack(fill="x", padx=10, pady=8)
+
+        # Icon
+        tk.Label(inner, text=icon, bg=CARD_BG, fg=text_color,
+                  font=("", 16, "bold"), width=2).pack(side="left")
+
+        # Name
+        tk.Label(inner, text=name, bg=CARD_BG, fg=TEXT_PRIMARY,
+                  font=FONT_CARD_NAME, anchor="w", width=14).pack(side="left", padx=(4, 0))
+
+        # Detail (right-aligned)
+        tk.Label(inner, text=detail, bg=CARD_BG, fg=text_color,
+                  font=FONT_CARD_DETAIL, anchor="e").pack(side="right", fill="x", expand=True)
 
     def _start_install(self):
         """Handle one-click install button."""
