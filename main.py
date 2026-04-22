@@ -188,6 +188,11 @@ class InstallerApp:
                                  borderwidth=0, highlightthickness=0, padx=14, pady=14)
         self.log_text.pack(fill="both", expand=True)
 
+        # Ensure monospace font is available
+        available_fonts = set(tk_font.families())
+        if "Cascadia Mono" not in available_fonts:
+            self.log_text.configure(font=FONT_LOG_FALLBACK)
+
         scrollbar = ttk.Scrollbar(self.log_text, command=self.log_text.yview)
         scrollbar.pack(side="right", fill="y")
         self.log_text.configure(yscrollcommand=scrollbar.set)
