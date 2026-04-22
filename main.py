@@ -110,20 +110,23 @@ class InstallerApp:
             return
         self._detecting = True
         self.results.clear()
-        self.tree.delete(*self.tree.get_children())
         self.install_btn.configure(state="disabled")
         self._log("Starting environment detection...")
 
         def _detect():
-            for det_cls in DETECTORS:
-                det = det_cls()
-                status, detail = det.detect()
-                self.results.append((det.name, status, detail))
-                self._log(f"  [{STATUS_ICONS[status]}] {det.name}: {detail}")
+            try:
+                for det_cls in DETECTORS:
+                    det = det_cls()
+                    status, detail = det.detect()
+                    self.results.append((det.name, status, detail))
+                    self._log(f"  [{STATUS_ICONS[status]}] {det.name}: {detail}")
 
-            self.root.after(0, self._update_tree)
-            self.root.after(0, self._on_detection_complete)
-            self.root.after(0, lambda: self._log("Detection complete."))
+                self.root.after(0, self._update_tree)
+                self.root.after(0, self._on_detection_complete)
+                self.root.after(0, lambda: self._log("Detection complete."))
+            except Exception as e:
+                self.root.after(0, lambda e=e: self._log(f"ERROR: Detection failed -- {e}"))
+                self.root.after(0, self._on_detection_complete)
 
         threading.Thread(target=_detect, daemon=True).start()
 
