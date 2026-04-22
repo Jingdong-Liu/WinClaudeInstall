@@ -10,7 +10,7 @@ class NodeDetector(Detector):
     def detect(self) -> tuple[Status, str]:
         code, output = run_quiet("node --version")
         if code == 0 and output.startswith("v"):
-            version = output.strip()
+            version = output
             # Extract major version
             try:
                 major = int(version.split(".")[0].lstrip("v"))

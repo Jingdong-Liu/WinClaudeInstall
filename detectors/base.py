@@ -16,6 +16,7 @@ class Detector(ABC):
     """
 
     @property
+    @abstractmethod
     def name(self) -> str:
         raise NotImplementedError
 
