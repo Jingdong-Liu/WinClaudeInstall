@@ -1,0 +1,80 @@
+<h2>当前 GUI 状态</h2>
+<p class="subtitle">Claude Code Installer — 当前界面示意</p>
+
+<div class="mockup">
+  <div class="mockup-header">当前界面示意</div>
+  <div class="mockup-body" style="font-family: 'Segoe UI', sans-serif; padding: 16px;">
+
+    <!-- Title bar -->
+    <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:2px solid #e0e0e0; margin-bottom:12px;">
+      <span style="font-size:14px; font-weight:600;">Claude Code Installer</span>
+      <span style="font-size:12px; color:#999;">800x500</span>
+    </div>
+
+    <!-- Two column layout -->
+    <div style="display:flex; gap:16px; min-height:340px;">
+
+      <!-- Left: Environment Check -->
+      <div style="flex:1; border:1px solid #ddd; border-radius:6px; padding:12px;">
+        <div style="font-size:14px; font-weight:bold; margin-bottom:8px;">Environment Check</div>
+        <div style="font-family:Consolas,monospace; font-size:12px;">
+          <div style="padding:4px 0; color:#22c55e;">✓ Node.js &nbsp;&nbsp;&nbsp; v20.11.0</div>
+          <div style="padding:4px 0; color:#22c55e;">✓ Git &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; v2.43.0</div>
+          <div style="padding:4px 0; color:#ef4444;">✗ Python &nbsp;&nbsp;&nbsp; not found</div>
+          <div style="padding:4px 0; color:#f59e0b;">⚠ npm &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 8.19.2</div>
+          <div style="padding:4px 0; color:#22c55e;">✓ PowerShell &nbsp; 7.4.1</div>
+          <div style="padding:4px 0; color:#22c55e;">✓ Bash &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 5.1.16</div>
+        </div>
+        <button style="margin-top:8px; padding:6px 16px; font-size:12px;">Refresh</button>
+      </div>
+
+      <!-- Right: Log -->
+      <div style="flex:1.5; border:1px solid #ddd; border-radius:6px; padding:12px; display:flex; flex-direction:column;">
+        <div style="font-size:14px; font-weight:bold; margin-bottom:8px;">Installation Log</div>
+        <div style="flex:1; background:#f5f5f5; border-radius:4px; padding:10px; font-family:Consolas,monospace; font-size:11px; color:#333; overflow-y:auto;">
+          <div>Starting environment detection...</div>
+          <div>&nbsp; [✓] Node.js: v20.11.0</div>
+          <div>&nbsp; [✓] Git: v2.43.0</div>
+          <div>&nbsp; [✗] Python: not found</div>
+          <div>&nbsp; [⚠] npm: 8.19.2</div>
+          <div>&nbsp; [✓] PowerShell: 7.4.1</div>
+          <div>&nbsp; [✓] Bash: 5.1.16</div>
+          <div>Detection complete.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom button -->
+    <div style="display:flex; justify-content:center; padding:12px 0; border-top:1px solid #e0e0e0; margin-top:12px;">
+      <button style="padding:10px 32px; font-size:16px; background:#0078d4; color:white; border:none; border-radius:4px;">&#x1f680; One-Click Install</button>
+    </div>
+
+  </div>
+</div>
+
+<h3 style="margin-top:24px;">美化方向</h3>
+<p class="subtitle">你希望界面呈现什么风格？选择一个方向：</p>
+
+<div class="options">
+  <div class="option" data-choice="modern-dark" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>现代深色主题</h3>
+      <p>深色背景 + 霓虹色强调 + 大圆角卡片 + 流畅阴影。类似 VS Code / Discord 风格。</p>
+    </div>
+  </div>
+  <div class="option" data-choice="clean_light" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>简洁明亮主题</h3>
+      <p>白色背景 + 细线边框 + 微阴影 + 大量留白。类似 Windows 11 设置 / Apple 风格。</p>
+    </div>
+  </div>
+  <div class="option" data-choice="tech_green" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>技术极客风格</h3>
+      <p>终端风格字体（等宽）+ 绿色强调 + 分隔线 + 信息密度高。类似 Terminal / Hacker News 风格。</p>
+    </div>
+  </div>
+</div>

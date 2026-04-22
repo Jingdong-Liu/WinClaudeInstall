@@ -1,0 +1,98 @@
+<h2>设计方案预览</h2>
+<p class="subtitle">简洁明亮主题 + 改进版两栏 + 系统原生字体</p>
+
+<div class="mockup">
+  <div class="mockup-header">Claude Code Installer — 美化后界面示意</div>
+  <div class="mockup-body" style="font-family: 'Segoe UI', 'Microsoft YaHei UI', sans-serif; padding: 0;">
+
+    <!-- Header bar -->
+    <div style="background:linear-gradient(135deg, #f8fafc 0%, #e8ecf1 100%); padding:20px 24px 16px; border-bottom:1px solid #e2e8f0;">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <div style="width:36px; height:36px; background:linear-gradient(135deg, #3b82f6, #6366f1); border-radius:10px; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; font-size:16px;">C</div>
+        <div>
+          <div style="font-size:18px; font-weight:600; color:#1e293b;">Claude Code Installer</div>
+          <div style="font-size:12px; color:#64748b;">一键安装环境检测与执行</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex; gap:0; min-height:320px; background:#f8fafc;">
+
+      <!-- Left Panel -->
+      <div style="flex:1; padding:16px; border-right:1px solid #e2e8f0;">
+        <div style="font-size:13px; font-weight:600; color:#475569; margin-bottom:12px; text-transform:uppercase; letter-spacing:0.5px;">Environment Check</div>
+
+        <!-- Status items as cards -->
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          <div style="background:white; border:1px solid #e2e8f0; border-radius:8px; padding:10px 14px; display:flex; align-items:center; gap:10px; box-shadow:0 1px 2px rgba(0,0,0,0.04);">
+            <span style="color:#22c55e; font-size:16px; font-weight:bold;">✓</span>
+            <span style="font-size:13px; color:#334155; font-weight:500; min-width:90px;">Node.js</span>
+            <span style="font-size:12px; color:#64748b; margin-left:auto;">v20.11.0</span>
+          </div>
+          <div style="background:white; border:1px solid #e2e8f0; border-radius:8px; padding:10px 14px; display:flex; align-items:center; gap:10px; box-shadow:0 1px 2px rgba(0,0,0,0.04);">
+            <span style="color:#22c55e; font-size:16px; font-weight:bold;">✓</span>
+            <span style="font-size:13px; color:#334155; font-weight:500; min-width:90px;">Git</span>
+            <span style="font-size:12px; color:#64748b; margin-left:auto;">v2.43.0</span>
+          </div>
+          <div style="background:white; border:1px solid #fca5a5; border-radius:8px; padding:10px 14px; display:flex; align-items:center; gap:10px; box-shadow:0 1px 3px rgba(239,68,68,0.08);">
+            <span style="color:#ef4444; font-size:16px; font-weight:bold;">✗</span>
+            <span style="font-size:13px; color:#334155; font-weight:500; min-width:90px;">Python</span>
+            <span style="font-size:12px; color:#ef4444; margin-left:auto; font-weight:500;">not found</span>
+          </div>
+          <div style="background:white; border:1px solid #fcd34d; border-radius:8px; padding:10px 14px; display:flex; align-items:center; gap:10px; box-shadow:0 1px 3px rgba(245,158,11,0.08);">
+            <span style="color:#f59e0b; font-size:16px; font-weight:bold;">⚠</span>
+            <span style="font-size:13px; color:#334155; font-weight:500; min-width:90px;">npm</span>
+            <span style="font-size:12px; color:#f59e0b; margin-left:auto; font-weight:500;">8.19.2</span>
+          </div>
+          <div style="background:white; border:1px solid #e2e8f0; border-radius:8px; padding:10px 14px; display:flex; align-items:center; gap:10px; box-shadow:0 1px 2px rgba(0,0,0,0.04);">
+            <span style="color:#22c55e; font-size:16px; font-weight:bold;">✓</span>
+            <span style="font-size:13px; color:#334155; font-weight:500; min-width:90px;">PowerShell</span>
+            <span style="font-size:12px; color:#64748b; margin-left:auto;">7.4.1</span>
+          </div>
+          <div style="background:white; border:1px solid #e2e8f0; border-radius:8px; padding:10px 14px; display:flex; align-items:center; gap:10px; box-shadow:0 1px 2px rgba(0,0,0,0.04);">
+            <span style="color:#22c55e; font-size:16px; font-weight:bold;">✓</span>
+            <span style="font-size:13px; color:#334155; font-weight:500; min-width:90px;">Bash</span>
+            <span style="font-size:12px; color:#64748b; margin-left:auto;">5.1.16</span>
+          </div>
+        </div>
+
+        <button style="margin-top:12px; padding:8px 20px; font-size:13px; background:white; border:1px solid #d1d5db; border-radius:6px; color:#475569; cursor:pointer; font-family:inherit;">↻ Refresh</button>
+      </div>
+
+      <!-- Right Panel -->
+      <div style="flex:1.5; padding:16px;">
+        <div style="font-size:13px; font-weight:600; color:#475569; margin-bottom:12px; text-transform:uppercase; letter-spacing:0.5px;">Installation Log</div>
+        <div style="background:white; border:1px solid #e2e8f0; border-radius:8px; padding:14px; font-family:'Cascadia Mono', 'Consolas', monospace; font-size:12px; color:#475569; line-height:1.7; min-height:280px; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+          <div style="color:#94a3b8;">Starting environment detection...</div>
+          <div>&nbsp;&nbsp;<span style="color:#22c55e;">✓</span> Node.js: v20.11.0</div>
+          <div>&nbsp;&nbsp;<span style="color:#22c55e;">✓</span> Git: v2.43.0</div>
+          <div>&nbsp;&nbsp;<span style="color:#ef4444;">✗</span> Python: not found</div>
+          <div>&nbsp;&nbsp;<span style="color:#f59e0b;">⚠</span> npm: 8.19.2 (outdated)</div>
+          <div>&nbsp;&nbsp;<span style="color:#22c55e;">✓</span> PowerShell: 7.4.1</div>
+          <div>&nbsp;&nbsp;<span style="color:#22c55e;">✓</span> Bash: 5.1.16</div>
+          <div style="color:#94a3b8;">Detection complete.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom bar -->
+    <div style="background:white; border-top:1px solid #e2e8f0; padding:16px 24px; display:flex; justify-content:center;">
+      <button style="padding:12px 48px; font-size:15px; font-weight:600; background:linear-gradient(135deg, #3b82f6, #6366f1); color:white; border:none; border-radius:8px; cursor:pointer; font-family:inherit; box-shadow:0 4px 12px rgba(59,130,246,0.3); transition:all 0.2s;">One-Click Install</button>
+    </div>
+
+  </div>
+</div>
+
+<div class="pros-cons" style="margin-top:24px;">
+  <div class="pros">
+    <h4>Key Changes</h4>
+    <ul>
+      <li>Header bar with icon + subtitle</li>
+      <li>Each detector as a card with subtle shadow</li>
+      <li>Missing/Warning items have colored borders</li>
+      <li>Log panel in white card with monospace font</li>
+      <li>Gradient install button with shadow</li>
+      <li>Segoe UI + Cascadia Mono fonts</li>
+    </ul>
+  </div>
+</div>
