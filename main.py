@@ -106,6 +106,9 @@ class InstallerApp:
 
     def _auto_detect(self):
         """Run all detectors and update the tree view."""
+        if getattr(self, "_detecting", False):
+            return
+        self._detecting = True
         self.results.clear()
         self.tree.delete(*self.tree.get_children())
         self.install_btn.configure(state="disabled")
@@ -128,6 +131,7 @@ class InstallerApp:
         """Enable install button only if issues were found."""
         has_issues = any(s in (Status.MISSING, Status.WARNING) for _, s, _ in self.results)
         self.install_btn.configure(state="normal" if has_issues else "disabled")
+        self._detecting = False
 
     def _update_tree(self):
         """Populate the treeview with detection results."""
@@ -163,11 +167,12 @@ class InstallerApp:
         for name, status, detail in missing:
             self._log(f"\n--- Installing {name} ---")
 
-            installers = [
-                NpmInstaller(),
-                WingetInstaller(name),
-                DirectInstaller(name),
-            ]
+            # NpmInstaller only applies to Claude Code, not system dependencies
+            installers = []
+            if name == "npm" or name == "Node.js":
+                installers.append(NpmInstaller())
+            installers.append(WingetInstaller(name))
+            installers.append(DirectInstaller(name))
 
             success = False
             for installer in installers:
