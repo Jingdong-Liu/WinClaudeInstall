@@ -85,8 +85,38 @@ class InstallerApp:
         self.logger = setup_logger()
         self.results: list = []
 
+        self._setup_style()
         self._build_ui()
         self._auto_detect()
+
+    def _setup_style(self):
+        """Configure ttk styles for the clean light theme."""
+        style = ttk.Style()
+        style.theme_use("clam")
+
+        style.configure("TFrame", background=BG)
+        style.configure("Header.TFrame", background=HEADER_BG_START)
+        style.configure("Bottom.TFrame", background=CARD_BG)
+
+        style.configure("Section.TLabel", background=BG, foreground=TEXT_SECONDARY, font=FONT_SECTION)
+        style.configure("Title.TLabel", background=HEADER_BG_START, foreground=TEXT_PRIMARY, font=FONT_TITLE)
+        style.configure("Subtitle.TLabel", background=HEADER_BG_START, foreground=TEXT_MUTED, font=("Segoe UI", 12))
+        style.configure("Card.TLabel", background=CARD_BG, foreground=TEXT_SECONDARY)
+        style.configure("CardName.TLabel", background=CARD_BG, foreground=TEXT_PRIMARY, font=FONT_CARD_NAME)
+        style.configure("CardDetail.TLabel", background=CARD_BG, foreground=TEXT_SECONDARY, font=FONT_CARD_DETAIL)
+        style.configure("StatusOk.TLabel", foreground=OK_COLOR, background=CARD_BG, font=("", 16, "bold"))
+        style.configure("StatusMissing.TLabel", foreground=MISSING_COLOR, background=CARD_BG, font=("", 16, "bold"))
+        style.configure("StatusWarning.TLabel", foreground=WARNING_COLOR, background=CARD_BG, font=("", 16, "bold"))
+
+        style.configure("Install.TButton", background=BUTTON_BG, foreground="white", font=FONT_BTN, borderwidth=0, focuscolor="none")
+        style.map("Install.TButton",
+                  background=[("active", BUTTON_SHADOW), ("pressed", "#3730a3")],
+                  foreground=[("active", "white")])
+
+        style.configure("Refresh.TButton", background=CARD_BG, foreground=TEXT_SECONDARY, font=("Segoe UI", 12), borderwidth=1, padding=(8, 20))
+        style.map("Refresh.TButton",
+                  background=[("active", BG)],
+                  bordercolor=[("active", TEXT_MUTED)])
 
     def _build_ui(self):
         """Build the two-column layout with bottom button bar."""
