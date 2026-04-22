@@ -46,3 +46,32 @@ def test_node_detector_good_version(mock_run_quiet):
     status, detail = det.detect()
     assert status == Status.OK
     assert "v20.11.0" == detail
+
+
+from detectors.git import GitDetector
+from detectors.python import PythonDetector
+from detectors.powershell import PowerShellDetector
+from detectors.bash import BashDetector
+from detectors.npm import NpmDetector
+
+def _test_detector(det_class, expected_name):
+    det = det_class()
+    assert det.name == expected_name
+    status, detail = det.detect()
+    assert status in (Status.OK, Status.MISSING)
+    assert isinstance(detail, str)
+
+def test_git_detector():
+    _test_detector(GitDetector, "Git")
+
+def test_python_detector():
+    _test_detector(PythonDetector, "Python")
+
+def test_powershell_detector():
+    _test_detector(PowerShellDetector, "PowerShell")
+
+def test_bash_detector():
+    _test_detector(BashDetector, "Bash")
+
+def test_npm_detector():
+    _test_detector(NpmDetector, "npm")
