@@ -161,7 +161,7 @@ class InstallerApp:
                     status, detail = det.detect()
                     self.results.append((det.name, status, detail))
                     status_key = status.value if hasattr(status, 'value') else str(status).lower()
-                self._log(f"  [{STATUS_ICONS[status_key]}] {det.name}: {detail}")
+                    self._log(f"  [{STATUS_ICONS[status_key]}] {det.name}: {detail}")
 
                 self.root.after(0, self._update_tree)
                 self.root.after(0, self._on_detection_complete)
