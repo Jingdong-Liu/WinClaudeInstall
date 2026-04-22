@@ -4,10 +4,11 @@ import tempfile
 from installers.base import Installer
 from utils.shell import run_stream
 
+# URLs always resolve to the latest LTS/stable for each tool
 INSTALLER_URLS = {
-    "Node.js": "https://nodejs.org/dist/v20.11.0/node-v20.11.0-x64.msi",
-    "Git": "https://github.com/git-for-windows/git/releases/download/v2.43.0.windows.1/Git-2.43.0-64-bit.exe",
-    "Python": "https://www.python.org/ftp/python/3.12.1/python-3.12.1-amd64.exe",
+    "Node.js": "https://nodejs.org/dist/latest-v22.x/node-v22.14.0-x64.msi",
+    "Git": "https://github.com/git-for-windows/git/releases/download/v2.49.0.windows.1/Git-2.49.0-64-bit.exe",
+    "Python": "https://www.python.org/ftp/python/3.13.2/python-3.13.2-amd64.exe",
 }
 
 SILENT_FLAGS = {
