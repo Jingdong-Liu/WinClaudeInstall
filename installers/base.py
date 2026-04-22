@@ -16,6 +16,12 @@ class Installer(ABC):
     def priority(self) -> int:
         raise NotImplementedError
 
+    @property
+    @abstractmethod
+    def target(self) -> str:
+        """The package/component identifier to install."""
+        raise NotImplementedError
+
     @abstractmethod
     def install(self, log_callback) -> bool:
         """Execute installation, stream log via log_callback.
