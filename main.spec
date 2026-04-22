@@ -1,12 +1,20 @@
 # -*- mode: python ; coding: utf-8 -*-
+from PyInstaller.utils.hooks import collect_submodules
+
 block_cipher = None
+
+hidden = (
+    collect_submodules('detectors')
+    + collect_submodules('installers')
+    + collect_submodules('utils')
+)
 
 a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
     datas=[],
-    hiddenimports=['detectors', 'installers', 'utils'],
+    hiddenimports=hidden,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
