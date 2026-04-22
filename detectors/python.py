@@ -19,5 +19,5 @@ class PythonDetector(Detector):
                         return Status.WARNING, f"{version} (>= 3.9 recommended)"
                 except (ValueError, IndexError):
                     pass
-                return Status.OK, f"Python {version}"
+                return Status.OK, version
         return Status.MISSING, "not found"

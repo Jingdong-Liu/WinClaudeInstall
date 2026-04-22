@@ -75,3 +75,94 @@ def test_bash_detector():
 
 def test_npm_detector():
     _test_detector(NpmDetector, "npm")
+
+# GitDetector mock tests
+@patch("detectors.git.run_quiet")
+def test_git_detector_missing(mock_rq):
+    mock_rq.return_value = (-1, "")
+    status, detail = GitDetector().detect()
+    assert status == Status.MISSING
+
+@patch("detectors.git.run_quiet")
+def test_git_detector_ok(mock_rq):
+    mock_rq.return_value = (0, "git version 2.43.0.windows.1")
+    status, detail = GitDetector().detect()
+    assert status == Status.OK
+    assert "2.43.0" in detail
+
+# PythonDetector mock tests
+@patch("detectors.python.run_quiet")
+def test_python_detector_missing(mock_rq):
+    mock_rq.return_value = (-1, "")
+    status, detail = PythonDetector().detect()
+    assert status == Status.MISSING
+
+@patch("detectors.python.run_quiet")
+def test_python_detector_old_version(mock_rq):
+    mock_rq.return_value = (0, "Python 3.8.10")
+    status, detail = PythonDetector().detect()
+    assert status == Status.WARNING
+    assert "3.9 recommended" in detail
+
+@patch("detectors.python.run_quiet")
+def test_python_detector_ok(mock_rq):
+    mock_rq.return_value = (0, "Python 3.12.1")
+    status, detail = PythonDetector().detect()
+    assert status == Status.OK
+    assert "3.12.1" in detail
+
+# PowerShellDetector mock tests
+@patch("detectors.powershell.run_quiet")
+def test_powershell_detector_missing(mock_rq):
+    mock_rq.side_effect = [(-1, ""), (-1, "")]
+    status, detail = PowerShellDetector().detect()
+    assert status == Status.MISSING
+
+@patch("detectors.powershell.run_quiet")
+def test_powershell_detector_old_version(mock_rq):
+    mock_rq.return_value = (0, "5.1.19041.3693")
+    status, detail = PowerShellDetector().detect()
+    assert status == Status.WARNING
+    assert "PS7+ recommended" in detail
+
+@patch("detectors.powershell.run_quiet")
+def test_powershell_detector_ok(mock_rq):
+    mock_rq.return_value = (0, "7.4.1")
+    status, detail = PowerShellDetector().detect()
+    assert status == Status.OK
+    assert "7.4.1" in detail
+
+# BashDetector mock tests
+@patch("detectors.bash.run_quiet")
+def test_bash_detector_missing(mock_rq):
+    mock_rq.return_value = (-1, "")
+    status, detail = BashDetector().detect()
+    assert status == Status.MISSING
+
+@patch("detectors.bash.run_quiet")
+def test_bash_detector_ok(mock_rq):
+    mock_rq.return_value = (0, "GNU bash, version 5.1.16(1)-release")
+    status, detail = BashDetector().detect()
+    assert status == Status.OK
+    assert "5.1.16" in detail
+
+# NpmDetector mock tests
+@patch("detectors.npm.run_quiet")
+def test_npm_detector_missing(mock_rq):
+    mock_rq.return_value = (-1, "")
+    status, detail = NpmDetector().detect()
+    assert status == Status.MISSING
+
+@patch("detectors.npm.run_quiet")
+def test_npm_detector_old_version(mock_rq):
+    mock_rq.return_value = (0, "8.19.2")
+    status, detail = NpmDetector().detect()
+    assert status == Status.WARNING
+    assert "9 recommended" in detail
+
+@patch("detectors.npm.run_quiet")
+def test_npm_detector_ok(mock_rq):
+    mock_rq.return_value = (0, "10.2.4")
+    status, detail = NpmDetector().detect()
+    assert status == Status.OK
+    assert "10.2.4" in detail
