@@ -38,6 +38,7 @@ def run_stream(cmd: str, log_callback, cwd=None, timeout=300) -> int:
             logger.warning(f"Command timed out: {cmd}")
             return -1
 
+        proc.wait()  # Ensure returncode is set
         return proc.returncode or 0
 
     except Exception as e:

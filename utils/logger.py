@@ -3,6 +3,11 @@ import os
 
 def setup_logger(log_file: str = "installer.log") -> logging.Logger:
     logger = logging.getLogger("claude_installer")
+
+    # Only configure once
+    if logger.handlers:
+        return logger
+
     logger.setLevel(logging.DEBUG)
 
     fh = logging.FileHandler(log_file, encoding="utf-8")

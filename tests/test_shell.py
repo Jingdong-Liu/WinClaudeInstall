@@ -1,6 +1,6 @@
 import os
 from utils.logger import setup_logger
-from utils.shell import run_quiet
+from utils.shell import run_quiet, run_stream
 
 def test_logger_creates_file():
     log_file = "_test_logger.log"
@@ -23,3 +23,9 @@ def test_run_quiet_success():
 def test_run_quiet_failure():
     code, output = run_quiet("nonexistent_command_xyz")
     assert code != 0
+
+def test_run_stream_success():
+    lines = []
+    code = run_stream("echo hello", lambda line: lines.append(line))
+    assert code == 0
+    assert any("hello" in line for line in lines)
