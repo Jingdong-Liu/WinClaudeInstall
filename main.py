@@ -119,10 +119,15 @@ class InstallerApp:
                 self._log(f"  [{STATUS_ICONS[status]}] {det.name}: {detail}")
 
             self.root.after(0, self._update_tree)
-            self.root.after(0, lambda: self.install_btn.configure(state="normal"))
+            self.root.after(0, self._on_detection_complete)
             self.root.after(0, lambda: self._log("Detection complete."))
 
         threading.Thread(target=_detect, daemon=True).start()
+
+    def _on_detection_complete(self):
+        """Enable install button only if issues were found."""
+        has_issues = any(s in (Status.MISSING, Status.WARNING) for _, s, _ in self.results)
+        self.install_btn.configure(state="normal" if has_issues else "disabled")
 
     def _update_tree(self):
         """Populate the treeview with detection results."""
@@ -172,6 +177,8 @@ class InstallerApp:
                         success = True
                         self._log(f"  {name} installed successfully!")
                         break
+                    else:
+                        self._log(f"  {installer.name} returned failure")
                 except Exception as e:
                     self._log(f"  {installer.name} failed: {e}")
 
