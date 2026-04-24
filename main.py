@@ -23,6 +23,17 @@ DETECTORS = [
     CCSwitchDetector,
 ]
 
+DEPENDENCIES = [
+    "Node.js",
+    "Git",
+    "PowerShell",
+    "Python",
+    "npm",
+    "Bash",
+    "Claude Code",
+    "CC-Switch",
+]
+
 # ── Color Palette ──────────────────────────────────────────
 BG = "#f8fafc"
 CARD_BG = "#ffffff"
@@ -82,7 +93,7 @@ class InstallerApp:
 
         self._setup_style()
         self._build_ui()
-        self._auto_detect()
+        self._prepopulate_table()
 
     # ── Style ───────────────────────────────────────────────
 
@@ -214,6 +225,15 @@ class InstallerApp:
             if i < len(STEPS) - 1:
                 tk.Frame(self.step_frame, height=1, bg=BORDER).pack(fill="x", padx=16, pady=4)
 
+    def _prepopulate_table(self):
+        """Pre-fill the table with dependency names before detection."""
+        for name in DEPENDENCIES:
+            self.dep_table.insert("", "end", iid=name, values=(name, "待检测", "—"))
+
+    def _update_row(self, name: str, status_icon: str, version: str):
+        """Update a specific row in the table by dependency name."""
+        self.dep_table.item(name, values=(name, status_icon, version))
+
     # ── Step & Status Management ────────────────────────────
 
     def _set_step_active(self, index: int):
@@ -284,15 +304,12 @@ class InstallerApp:
         self._detecting = False
 
     def _update_tree(self):
-        """Render detector results into the dependency table."""
-        for item in self.dep_table.get_children():
-            self.dep_table.delete(item)
-
+        """Update table rows with detector results."""
         for name, status, detail in self.results:
             status_str = status.value if hasattr(status, 'value') else str(status).lower()
             status_icon = STATUS_ICONS.get(status_str, "—")
             version = detail if status_str == "ok" else "—"
-            self.dep_table.insert("", "end", values=(name, status_icon, version))
+            self._update_row(name, status_icon, version)
 
     # ── Installation ────────────────────────────────────────
 
