@@ -3,6 +3,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 import threading
+import itertools
 
 from detectors import (
     Detector, Status,
@@ -13,23 +14,24 @@ from detectors import (
 from utils.logger import setup_logger
 
 DETECTORS = [
+    PowerShellDetector,
+    PythonDetector,
     NodeDetector,
     GitDetector,
-    PythonDetector,
-    PowerShellDetector,
     BashDetector,
     NpmDetector,
     ClaudeCodeDetector,
     CCSwitchDetector,
 ]
 
+# 依赖按「从基础到最终」排序
 DEPENDENCIES = [
-    "Node.js",
-    "Git",
     "PowerShell",
     "Python",
-    "npm",
+    "Node.js",
+    "Git",
     "Bash",
+    "npm",
     "Claude Code",
     "CC-Switch",
 ]
@@ -48,18 +50,15 @@ BUTTON_BG = "#4f63e3"
 BUTTON_SHADOW = "#3b82f6"
 
 # ── Font Config ────────────────────────────────────────────
-FONT_TITLE = ("Segoe UI", 18, "bold")
-FONT_SECTION = ("Segoe UI", 11, "bold")
-FONT_LOG = ("Cascadia Mono", 12, "normal")
-FONT_LOG_FALLBACK = ("Consolas", 12, "normal")
 FONT_BTN = ("Segoe UI", 14, "bold")
 FONT_STATUS = ("Segoe UI", 11, "normal")
 FONT_STEP = ("Segoe UI", 13, "normal")
 FONT_STEP_NUM = ("Segoe UI", 12, "bold")
+FONT_SECTION = ("Segoe UI", 11, "bold")
+FONT_ACTIVITY = ("Segoe UI", 12, "normal")
 
 # ── Spacing ────────────────────────────────────────────────
 PADDING_WINDOW = 16
-CARD_GAP = 6
 
 # ── Step Definitions ───────────────────────────────────────
 STEPS = [
@@ -78,6 +77,9 @@ STATUS_ICONS = {
     "warning": "⚠",
 }
 
+# Activity spinner frames
+SPINNER = ["⠋", "⠙", "", "⠸", "⠼", "⠴", "", "⠧", "⠇", "⠏"]
+
 
 class InstallerApp:
     """主应用程序窗口."""
@@ -85,15 +87,18 @@ class InstallerApp:
     def __init__(self, root: tk.Tk):
         self.root = root
         self.root.title("Claude Code 一键安装器")
-        self.root.geometry("960x620")
-        self.root.minsize(800, 520)
+        self.root.geometry("1000x640")
+        self.root.minsize(820, 540)
 
         self.logger = setup_logger()
         self.results: list = []
+        self._spinner_idx = 0
+        self._spinner_after = None
 
         self._setup_style()
         self._build_ui()
         self._prepopulate_table()
+        self._auto_detect()
 
     # ── Style ───────────────────────────────────────────────
 
@@ -115,6 +120,9 @@ class InstallerApp:
         style.configure("Status.TLabel", background=CARD_BG, foreground=TEXT_SECONDARY,
                         font=FONT_STATUS)
 
+        style.configure("Activity.TLabel", background=CARD_BG, foreground=TEXT_PRIMARY,
+                        font=FONT_ACTIVITY)
+
         style.configure("Table.Treeview", background=CARD_BG, foreground=TEXT_PRIMARY,
                         fieldbackground=CARD_BG, font=("Segoe UI", 11))
         style.configure("Table.Treeview.Heading", background=CARD_BG, foreground=TEXT_SECONDARY,
@@ -125,7 +133,7 @@ class InstallerApp:
     # ── UI Building ─────────────────────────────────────────
 
     def _build_ui(self):
-        """构建新的三步引导式界面."""
+        """构建三步引导式界面."""
         self.root.configure(background=BG)
 
         # Main layout: 2 rows (content, status bar)
@@ -136,8 +144,8 @@ class InstallerApp:
         # ── Content Area ──
         content = ttk.Frame(self.root)
         content.grid(row=0, column=0, sticky="nsew", padx=PADDING_WINDOW, pady=PADDING_WINDOW)
-        content.columnconfigure(0, weight=0)   # Left step panel (fixed width)
-        content.columnconfigure(1, weight=1)   # Right main panel
+        content.columnconfigure(0, weight=0)
+        content.columnconfigure(1, weight=1)
         content.rowconfigure(0, weight=1)
 
         # ── Left Panel: Step Navigator ──
@@ -150,11 +158,11 @@ class InstallerApp:
         # ── Right Panel ──
         self.main_frame = ttk.Frame(content)
         self.main_frame.grid(row=0, column=1, sticky="nsew")
-        self.main_frame.rowconfigure(0, weight=0)  # Buttons
+        self.main_frame.rowconfigure(0, weight=0)  # Buttons + activity
         self.main_frame.rowconfigure(1, weight=1)  # Table
         self.main_frame.columnconfigure(0, weight=1)
 
-        # Action buttons
+        # Action buttons + activity label
         btn_frame = ttk.Frame(self.main_frame)
         btn_frame.grid(row=0, column=0, sticky="ew", pady=(0, 12))
 
@@ -164,7 +172,16 @@ class InstallerApp:
 
         self.install_btn = ttk.Button(btn_frame, text="安装",
                                        style="Action.TButton", command=self._start_install)
-        self.install_btn.pack(side="left")
+        self.install_btn.pack(side="left", padx=(0, 8))
+
+        self.download_install_btn = ttk.Button(btn_frame, text="下载并安装依赖",
+                                                style="Action.TButton", command=self._download_and_install)
+        self.download_install_btn.pack(side="left")
+
+        # Activity label (right-aligned)
+        self.activity_label = ttk.Label(btn_frame, text="",
+                                         style="Activity.TLabel", anchor="e")
+        self.activity_label.pack(side="right")
 
         # Table
         table_frame = ttk.Frame(self.main_frame)
@@ -180,12 +197,11 @@ class InstallerApp:
         self.dep_table.heading("version", text="版本")
 
         self.dep_table.column("name", width=200, minwidth=120)
-        self.dep_table.column("status", width=120, minwidth=100)
-        self.dep_table.column("version", width=140, minwidth=80)
+        self.dep_table.column("status", width=130, minwidth=100)
+        self.dep_table.column("version", width=150, minwidth=80)
 
         self.dep_table.grid(row=0, column=0, sticky="nsew")
 
-        # Scrollbar
         scrollbar = ttk.Scrollbar(table_frame, orient="vertical",
                                    command=self.dep_table.yview)
         scrollbar.grid(row=0, column=1, sticky="ns")
@@ -200,44 +216,61 @@ class InstallerApp:
         self.status_label.grid(row=1, column=0, sticky="ew", padx=PADDING_WINDOW, pady=8)
 
     def _build_steps(self):
-        """Render the 3-step navigator on the left panel."""
+        """Render the 3-step navigator."""
         self._step_circles = []
         self._step_labels = []
 
         for i, (num, label) in enumerate(STEPS):
-            # Step row
             row = ttk.Frame(self.step_frame, style="Step.TFrame")
             row.pack(fill="x", pady=2)
 
-            # Circle
             circle = tk.Label(row, text=num, bg=STEP_DEFAULT_COLOR, fg="white",
                               font=FONT_STEP_NUM, width=2, height=2, relief="flat")
             circle.pack(side="left", pady=2)
             self._step_circles.append(circle)
 
-            # Label
             lbl = tk.Label(row, text=label, bg=BG, fg=TEXT_SECONDARY,
                            font=FONT_STEP, anchor="w")
             lbl.pack(side="left", padx=8, pady=6, fill="x", expand=True)
             self._step_labels.append(lbl)
 
-            # Divider line (not after last step)
             if i < len(STEPS) - 1:
                 tk.Frame(self.step_frame, height=1, bg=BORDER).pack(fill="x", padx=16, pady=4)
 
     def _prepopulate_table(self):
-        """Pre-fill the table with dependency names before detection."""
+        """Pre-fill the table with all dependencies."""
         for name in DEPENDENCIES:
             self.dep_table.insert("", "end", iid=name, values=(name, "待检测", "—"))
 
     def _update_row(self, name: str, status_icon: str, version: str):
-        """Update a specific row in the table by dependency name."""
+        """Update a single row."""
         self.dep_table.item(name, values=(name, status_icon, version))
+
+    # ── Activity Spinner ───────────────────────────────────
+
+    def _start_spinner(self, message: str):
+        """Start the animated activity label."""
+        self._spinner_message = message
+        self._spinner_idx = 0
+        self._animate_spinner()
+
+    def _animate_spinner(self):
+        """Animate the spinner character."""
+        frame = SPINNER[self._spinner_idx]
+        self.activity_label.configure(text=f"{frame} {self._spinner_message}")
+        self._spinner_idx = (self._spinner_idx + 1) % len(SPINNER)
+        self._spinner_after = self.root.after(150, self._animate_spinner)
+
+    def _stop_spinner(self):
+        """Stop the animated activity label."""
+        if self._spinner_after:
+            self.root.after_cancel(self._spinner_after)
+            self._spinner_after = None
+        self.activity_label.configure(text="")
 
     # ── Step & Status Management ────────────────────────────
 
     def _set_step_active(self, index: int):
-        """Mark a step as currently active."""
         for i, circle in enumerate(self._step_circles):
             if i < index:
                 circle.configure(bg=STEP_DONE_COLOR, text="✓")
@@ -250,13 +283,11 @@ class InstallerApp:
                 self._step_labels[i].configure(fg=TEXT_MUTED)
 
     def _set_step_done(self, index: int):
-        """Mark a step as completed."""
         circle = self._step_circles[index]
         circle.configure(bg=STEP_DONE_COLOR, text="✓")
         self._step_labels[index].configure(fg=OK_COLOR)
 
     def _set_status(self, message: str):
-        """Update the status bar label."""
         self.status_label.configure(text=message)
 
     # ── Detection ───────────────────────────────────────────
@@ -269,8 +300,10 @@ class InstallerApp:
         self.results.clear()
         self.install_btn.configure(state="disabled")
         self.detect_btn.configure(state="disabled")
+        self.download_install_btn.configure(state="disabled")
         self._set_step_active(0)
         self._set_status("正在检测环境，请稍候...")
+        self._start_spinner("检测中")
 
         def _detect():
             try:
@@ -289,6 +322,7 @@ class InstallerApp:
 
     def _on_detection_complete(self):
         """Handle detection completion."""
+        self._stop_spinner()
         has_issues = any(
             (s.value if hasattr(s, 'value') else str(s).lower()) in ("missing", "warning")
             for _, s, _ in self.results
@@ -301,6 +335,7 @@ class InstallerApp:
             self._set_status("检测到需要安装的组件，请点击「安装」")
         self.install_btn.configure(state="normal" if has_issues else "disabled")
         self.detect_btn.configure(state="normal")
+        self.download_install_btn.configure(state="normal" if has_issues else "disabled")
         self._detecting = False
 
     def _update_tree(self):
@@ -311,7 +346,7 @@ class InstallerApp:
             version = detail if status_str == "ok" else "—"
             self._update_row(name, status_icon, version)
 
-    # ── Installation ────────────────────────────────────────
+    # ── Installation ───────────────────────────────────────
 
     def _start_install(self):
         """Handle install button click."""
@@ -325,8 +360,29 @@ class InstallerApp:
         if not messagebox.askokcancel("确认安装", f"即将安装以下组件：\n\n" + "\n".join(f"  · {n}" for n in names)):
             return
 
+        self._do_install(missing)
+
+    def _download_and_install(self):
+        """Download and install all missing dependencies, including downloading bundled installers."""
+        missing = [(n, s, d) for n, s, d in self.results
+                    if (s.value if hasattr(s, 'value') else str(s).lower()) in ("missing", "warning")]
+        if not missing:
+            self._set_status("所有组件已安装完毕")
+            return
+
+        names = [n for n, _, _ in missing]
+        if not messagebox.askokcancel("确认下载并安装",
+                f"即将下载并安装以下组件：\n\n" + "\n".join(f"  · {n}" for n in names) +
+                "\n\n（如果网络不可用，将尝试使用已捆绑的离线安装包）"):
+            return
+
+        self._do_install(missing)
+
+    def _do_install(self, missing):
+        """Run the install process."""
         self.install_btn.configure(state="disabled")
         self.detect_btn.configure(state="disabled")
+        self.download_install_btn.configure(state="disabled")
         self._set_step_active(1)
         self._set_status("正在安装，请稍候...")
 
@@ -338,6 +394,7 @@ class InstallerApp:
 
         total = len(missing)
         for i, (name, status, detail) in enumerate(missing):
+            self._start_spinner(f"正在安装 {name} ({i + 1}/{total})")
             self.root.after(0, lambda n=name, idx=i: self._set_status(f"正在安装 {n} ({idx + 1}/{total})..."))
 
             installers = []
@@ -353,7 +410,7 @@ class InstallerApp:
                     if installer.install(None):
                         success = True
                         break
-                except Exception as e:
+                except Exception:
                     pass
 
             if not success:
@@ -364,6 +421,7 @@ class InstallerApp:
         self.root.after(0, lambda: self._set_status("安装完成，正在重新检测..."))
         self.root.after(0, lambda: self.install_btn.configure(state="normal"))
         self.root.after(0, lambda: self.detect_btn.configure(state="normal"))
+        self.root.after(0, lambda: self.download_install_btn.configure(state="normal"))
         self.root.after(1000, lambda: self._auto_detect())
 
 
