@@ -428,13 +428,12 @@ class InstallerApp:
 
         for name, status, detail in self.results:
             status_str = status.value if hasattr(status, 'value') else str(status).lower()
-            if status_str in ("missing", "warning"):
-                btn = ttk.Button(self._row_button_frame, text="安装",
-                                  style="Install.TButton",
-                                  command=lambda n=name: self._install_single(n))
-                btn.pack(side="top", fill="x", padx=(4, 4),
-                         pady=(2, 0))
-            # else: no button for already-ok
+            btn_text = "安装" if status_str in ("missing", "warning") else "重新安装"
+            btn = ttk.Button(self._row_button_frame, text=btn_text,
+                              style="Install.TButton",
+                              command=lambda n=name: self._install_single(n))
+            btn.pack(side="top", fill="x", padx=(4, 4),
+                     pady=(2, 0))
 
     def _install_single(self, name: str):
         """Install a single dependency."""
