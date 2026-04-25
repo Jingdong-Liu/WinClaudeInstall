@@ -105,11 +105,13 @@ class InstallerApp:
         style.configure("TFrame", background=BG)
 
         style.configure("Action.TButton", background=BUTTON_BG, foreground="white",
-                        font=("Segoe UI", 13, "bold"), borderwidth=0, focuscolor="none",
-                        padding=(16, 8))
+                        font=FONT_BTN, borderwidth=1, focuscolor="none",
+                        padding=(20, 10), relief="flat")
         style.map("Action.TButton",
-                  background=[("active", BUTTON_SHADOW), ("pressed", "#3730a3")],
-                  foreground=[("active", "white")])
+                  background=[("active", BUTTON_SHADOW), ("pressed", "#3730a3"),
+                              ("disabled", "#93a1f6")],
+                  foreground=[("active", "white"), ("disabled", "#e2e8f0")],
+                  relief=[("pressed", "sunken"), ("active", "flat"), ("disabled", "flat")])
 
         style.configure("Status.TLabel", background=CARD_BG, foreground=TEXT_SECONDARY,
                         font=FONT_STATUS)
@@ -121,12 +123,13 @@ class InstallerApp:
                   background=[("active", BUTTON_SHADOW), ("pressed", "#3730a3")],
                   foreground=[("active", "white")])
 
-        style.configure("Detecting.TButton", background="#f59e0b", foreground="white",
-                        font=("Segoe UI", 13, "bold"), borderwidth=0, focuscolor="none",
-                        padding=(16, 8))
+        style.configure("Detecting.TButton", background=WARNING_COLOR, foreground="white",
+                        font=FONT_BTN, borderwidth=1, focuscolor="none",
+                        padding=(20, 10), relief="flat")
         style.map("Detecting.TButton",
-                  background=[("active", "#d97706"), ("disabled", "#fbbf24")],
-                  foreground=[("active", "white")])
+                  background=[("active", "#d97706"), ("disabled", "#fcd34d")],
+                  foreground=[("active", "white")],
+                  relief=[("pressed", "sunken"), ("active", "flat"), ("disabled", "flat")])
 
         style.configure("Table.Treeview", background=CARD_BG, foreground=TEXT_PRIMARY,
                         fieldbackground=CARD_BG, font=("Segoe UI", 11))
@@ -157,22 +160,33 @@ class InstallerApp:
         content.rowconfigure(2, weight=0)  # terminal
 
         # ── Button Row ──
-        btn_frame = ttk.Frame(content)
+        btn_frame = tk.Frame(content, bg=BG)
         btn_frame.grid(row=0, column=0, sticky="ew", pady=(0, 8))
 
-        self.detect_btn = ttk.Button(btn_frame, text="一键自动检测",
-                                      style="Action.TButton", command=self._auto_detect)
-        self.detect_btn.pack(side="left", padx=(0, 8))
+        # Button container with colored background (pill shape)
+        btn_container = tk.Frame(btn_frame, bg=BUTTON_BG, bd=0, relief="flat", padx=4, pady=3)
+        btn_container.pack(side="left", padx=0)
 
-        self.install_btn = ttk.Button(btn_frame, text="一键安装",
-                                       style="Action.TButton", command=self._start_install)
+        self.detect_btn = tk.Button(btn_container, text=" 一键自动检测 ",
+                                     bg=BUTTON_BG, fg="white", font=FONT_BTN,
+                                     activebackground=BUTTON_SHADOW, activeforeground="white",
+                                     bd=0, cursor="hand2", relief="flat",
+                                     command=self._auto_detect)
+        self.detect_btn.pack(side="left")
+
+        tk.Frame(btn_container, width=1, bg=BUTTON_SHADOW).pack(side="left", padx=0, fill="y")
+
+        self.install_btn = tk.Button(btn_container, text=" 一键安装 ",
+                                      bg=BUTTON_BG, fg="white", font=FONT_BTN,
+                                      activebackground=BUTTON_SHADOW, activeforeground="white",
+                                      bd=0, cursor="hand2", relief="flat",
+                                      command=self._start_install)
         self.install_btn.pack(side="left")
 
-        # Result label (right-aligned)
-        self.result_label = tk.Label(btn_frame, text="", bg=BUTTON_BG, fg="white",
-                                      font=("Segoe UI", 11, "bold"), anchor="e",
-                                      padx=8, pady=4)
-        self.result_label.pack(side="right")
+        # Result label (right-aligned, subtle - no background)
+        self.result_label = tk.Label(btn_frame, text="", bg=BG,
+                                      font=("Segoe UI", 11, "bold"), anchor="e")
+        self.result_label.pack(side="right", fill="x", expand=True)
 
         # ── Table ──
         self._build_table_area(content)
@@ -331,11 +345,10 @@ class InstallerApp:
         self._progress_lines.clear()
         self.progress_bar["value"] = 0
         self.progress_label.configure(text="")
-        self.result_label.configure(text="", bg=BUTTON_BG)
+        self.result_label.configure(text="", fg=BG)
         self._clear_terminal()
 
-        self.detect_btn.configure(style="Detecting.TButton")
-        self.detect_btn.configure(state="disabled")
+        self.detect_btn.configure(bg=WARNING_COLOR, state="disabled")
 
         self._start_spinner("检测中")
 
@@ -366,7 +379,7 @@ class InstallerApp:
     def _on_detection_complete(self):
         """Handle detection completion."""
         self._stop_spinner()
-        self.detect_btn.configure(style="Action.TButton")
+        self.detect_btn.configure(bg=BUTTON_BG)
 
         # Update table rows with results + tags
         for name, status, detail in self.results:
@@ -387,11 +400,16 @@ class InstallerApp:
         )
 
         if not self.results:
-            self.result_label.configure(text="检测失败", bg=MISSING_COLOR)
+            self.result_label.configure(text="检测失败", fg=MISSING_COLOR)
+            self.progress_label.configure(text="检测失败", fg=MISSING_COLOR)
         elif not has_issues:
-            self.result_label.configure(text="检测完成：全部就绪", bg=OK_COLOR)
+            self.result_label.configure(text="✓ 检测完成：全部就绪", fg=OK_COLOR)
+            self.progress_label.configure(text="✓ 检测完成，所有依赖已就绪", fg=OK_COLOR)
         else:
-            self.result_label.configure(text="部分需要安装", bg=WARNING_COLOR)
+            missing_count = sum(1 for _, s, _ in self.results
+                                if (s.value if hasattr(s, 'value') else str(s).lower()) in ("missing", "warning"))
+            self.result_label.configure(text=f"{missing_count} 项需要安装", fg=WARNING_COLOR)
+            self.progress_label.configure(text=f"检测完成 — {missing_count} 项未安装，可点击行内按钮单独安装", fg=WARNING_COLOR)
 
         # Update per-row install buttons
         self._update_row_buttons(has_issues)
@@ -478,7 +496,7 @@ class InstallerApp:
         missing = [(n, s, d) for n, s, d in self.results
                     if (s.value if hasattr(s, 'value') else str(s).lower()) in ("missing", "warning")]
         if not missing:
-            self.result_label.configure(text="所有组件已安装完毕", bg=OK_COLOR)
+            self.result_label.configure(text="所有组件已安装完毕", fg=OK_COLOR)
             return
 
         names = [n for n, _, _ in missing]
