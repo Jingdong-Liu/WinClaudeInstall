@@ -144,24 +144,61 @@ class InstallerApp:
         """构建主界面."""
         self.root.configure(background=BG)
 
-        # Main layout: 4 rows (content, progress, terminal, status bar)
+        # Main layout: 2 rows (content + terminal split, progress)
         self.root.rowconfigure(0, weight=1)
         self.root.rowconfigure(1, weight=0)  # progress
-        self.root.rowconfigure(2, weight=0)  # terminal
-        self.root.rowconfigure(3, weight=0)  # status bar
         self.root.columnconfigure(0, weight=1)
 
-        # ── Content Area ──
+        # ── Content Area (table + terminal, split with PanedWindow) ──
         content = ttk.Frame(self.root)
         content.grid(row=0, column=0, sticky="nsew", padx=PADDING_WINDOW, pady=PADDING_WINDOW)
         content.columnconfigure(0, weight=1)
-        content.rowconfigure(0, weight=0)  # button row
-        content.rowconfigure(1, weight=1)  # table
-        content.rowconfigure(2, weight=0)  # terminal
+        content.rowconfigure(0, weight=1)
 
-        # ── Button Row ──
-        btn_frame = tk.Frame(content, bg=BG)
-        btn_frame.grid(row=0, column=0, sticky="ew", pady=(0, 8))
+        # PanedWindow for table/terminal split
+        self.paned = tk.PanedWindow(content, orient="vertical",
+                                     bg=BG, sashwidth=6, sashrelief="raised",
+                                     cursor="sb_v_double_arrow")
+        self.paned.grid(row=0, column=0, sticky="nsew")
+
+        # Top pane: button row + table
+        top_frame = tk.Frame(content, bg=BG)
+        self._build_button_row(top_frame)
+        self._build_table_area(top_frame)
+        self.paned.add(top_frame, minsize=200)
+
+        # Bottom pane: terminal
+        terminal_pane = tk.Frame(content, bg=BG)
+        self._build_terminal(terminal_pane)
+        self.paned.add(terminal_pane, minsize=60)
+
+        # ── Progress Section (full width) ──
+        progress_frame = tk.Frame(self.root, bg=BG)
+        progress_frame.grid(row=1, column=0, sticky="ew", padx=PADDING_WINDOW, pady=(0, 8))
+
+        self.progress_bar = ttk.Progressbar(progress_frame, mode="determinate",
+                                             maximum=len(DEPENDENCIES))
+        self.progress_bar.pack(fill="x", side="top")
+
+        # Dog emoji overlayed on progress bar tip
+        self.dog_label = tk.Label(progress_frame, text="\U0001f436", bg=BG,
+                                   font=("Segoe UI Emoji", 16), anchor="center")
+        self.dog_label.place(x=0, y=0, height=22)
+
+        self.progress_label = tk.Label(progress_frame, text="", bg=BG,
+                                        fg=TEXT_PRIMARY, font=("Segoe UI", 10),
+                                        anchor="w", justify="left")
+        self.progress_label.pack(fill="x", side="top", pady=(4, 0))
+
+        # Reposition dog label when progress bar updates
+        self.progress_bar.bind("<Configure>", self._reposition_dog)
+        # Also reposition after a short delay for initial layout
+        self.progress_bar.after(200, self._reposition_dog)
+
+    def _build_button_row(self, parent):
+        """Build the button row at top of content area."""
+        btn_frame = tk.Frame(parent, bg=BG)
+        btn_frame.pack(fill="x", pady=(0, 8))
 
         # Button container with colored background (pill shape)
         btn_container = tk.Frame(btn_frame, bg=BUTTON_BG, bd=0, relief="flat", padx=4, pady=3)
@@ -188,38 +225,30 @@ class InstallerApp:
                                       font=("Segoe UI", 11, "bold"), anchor="e")
         self.result_label.pack(side="right", fill="x", expand=True)
 
-        # ── Table ──
-        self._build_table_area(content)
-
-        # ── Terminal Output ──
-        self._build_terminal(content)
-
-        # ── Progress Section (full width) ──
-        progress_frame = ttk.Frame(self.root)
-        progress_frame.grid(row=1, column=0, sticky="ew", padx=PADDING_WINDOW, pady=(0, 8))
-        progress_frame.columnconfigure(0, weight=1)
-        progress_frame.columnconfigure(1, weight=0)
-
-        self.progress_bar = ttk.Progressbar(progress_frame, mode="determinate",
-                                             maximum=len(DEPENDENCIES))
-        self.progress_bar.grid(row=0, column=0, sticky="ew")
-
-        # Dog emoji on the right side of the progress bar
-        self.dog_label = tk.Label(progress_frame, text="\U0001f436", bg=BG,
-                                   font=("Segoe UI Emoji", 14))
-        self.dog_label.grid(row=0, column=1, sticky="w", padx=(4, 0))
-
-        self.progress_label = tk.Label(progress_frame, text="", bg=BG,
-                                        fg=TEXT_PRIMARY, font=("Segoe UI", 10),
-                                        anchor="w", justify="left")
-        self.progress_label.grid(row=1, column=0, columnspan=2, sticky="w", pady=(4, 0))
+    def _reposition_dog(self, event=None):
+        """Move dog emoji to the tip of the progress bar fill."""
+        try:
+            bar_x = self.progress_bar.winfo_x()
+            bar_w = self.progress_bar.winfo_width()
+            bar_h = self.progress_bar.winfo_height()
+            value = self.progress_bar["value"]
+            max_val = self.progress_bar["maximum"]
+            if max_val == 0 or bar_w <= 0:
+                return
+            ratio = value / max_val
+            dog_w = self.dog_label.winfo_reqwidth()
+            # Position at the tip of the fill (ratio * bar_width)
+            dog_x = int(bar_x + ratio * bar_w - dog_w // 2)
+            # Vertically centered on the progress bar
+            dog_y = max(0, (bar_h - 22) // 2)
+            self.dog_label.place(x=dog_x, y=dog_y, width=dog_w, height=22)
+        except Exception:
+            pass
 
     def _build_table_area(self, parent):
         """Build the dependency table with per-row install buttons as 4th column."""
         table_frame = ttk.Frame(parent)
-        table_frame.grid(row=1, column=0, sticky="nsew")
-        table_frame.columnconfigure(0, weight=1)
-        table_frame.rowconfigure(0, weight=1)
+        table_frame.pack(fill="both", expand=True)
 
         # Treeview columns: 依赖, 状态, 版本, 操作
         self.dep_table = ttk.Treeview(table_frame, columns=("name", "status", "version", "action"),
@@ -235,29 +264,24 @@ class InstallerApp:
         self.dep_table.column("version", width=140, minwidth=70, anchor="center")
         self.dep_table.column("action", width=110, minwidth=70, anchor="center")
 
-        self.dep_table.grid(row=0, column=0, sticky="nsew")
+        self.dep_table.pack(side="left", fill="both", expand=True)
 
         scrollbar = ttk.Scrollbar(table_frame, orient="vertical",
                                    command=self.dep_table.yview)
-        scrollbar.grid(row=0, column=1, sticky="ns")
+        scrollbar.pack(side="right", fill="y")
         self.dep_table.configure(yscrollcommand=scrollbar.set)
 
         self._row_buttons: dict = {}  # iid -> button widget
 
     def _build_terminal(self, parent):
         """Build the terminal output section."""
-        terminal_frame = ttk.Frame(parent)
-        terminal_frame.grid(row=2, column=0, sticky="nsew", pady=(8, 0))
-        terminal_frame.columnconfigure(0, weight=1)
-        terminal_frame.rowconfigure(1, weight=1)
-
-        terminal_header = tk.Label(terminal_frame, text="检测过程", bg=BG,
+        terminal_header = tk.Label(parent, text="检测过程", bg=BG,
                                     fg=TEXT_SECONDARY, font=("Segoe UI", 10, "bold"),
                                     anchor="w")
-        terminal_header.grid(row=0, column=0, sticky="ew")
+        terminal_header.pack(fill="x", pady=(8, 0))
 
-        terminal_inner = tk.Frame(terminal_frame, bg="#1e1e1e", bd=1, relief="sunken")
-        terminal_inner.grid(row=1, column=0, sticky="nsew")
+        terminal_inner = tk.Frame(parent, bg="#1e1e1e", bd=1, relief="sunken")
+        terminal_inner.pack(fill="both", expand=True, pady=(4, 0))
 
         self.terminal_text = tk.Text(terminal_inner, bg="#1e1e1e", fg="#d4d4d4",
                                       font=("Cascadia Code", 10, "normal"),
@@ -307,6 +331,7 @@ class InstallerApp:
     def _set_progress(self, current: int, total: int, name: str, status=None, detail=""):
         """Update progress bar, terminal output, and table in real-time."""
         self.progress_bar["value"] = current - 1 if current > 0 else 0
+        self.root.after(10, self._reposition_dog)
         if status is not None:
             status_str = status.value if hasattr(status, 'value') else str(status).lower()
             status_icon = STATUS_ICONS.get(status_str, "—")
@@ -409,6 +434,7 @@ class InstallerApp:
 
         # Fill progress bar to 100%
         self.progress_bar["value"] = len(DEPENDENCIES)
+        self.root.after(10, self._reposition_dog)
 
         if not self.results:
             self.result_label.configure(text="检测失败", fg=MISSING_COLOR)
