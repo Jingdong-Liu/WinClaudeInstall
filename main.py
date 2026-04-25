@@ -285,17 +285,15 @@ class InstallerApp:
     def _set_status(self, message: str):
         self.status_label.configure(text=message)
 
-    def _set_progress(self, current: int, total: int, name: str, status=None):
+    def _set_progress(self, current: int, total: int, name: str, status=None, detail=""):
         """Update progress bar, terminal output, and table in real-time."""
         self.progress_bar["value"] = current
         if status is not None:
-            # Update table row immediately
             status_str = status.value if hasattr(status, 'value') else str(status).lower()
             status_icon = STATUS_ICONS.get(status_str, "—")
-            version = status_str == "ok" and (name in [d for d in self.results if d[0] == name][0][2] if any(d[0] == name for d in self.results) else "—") or "—"
+            version = detail if status_str == "ok" else "—"
             self._update_row(name, status_icon, version)
 
-            # Update terminal with result
             icon = STATUS_ICONS.get(status_str, "?")
             detail_text = f"{name} → {version}" if status_str == "ok" else f"{name} → 未安装"
             self._write_terminal(f"  {icon} {detail_text}\n",
@@ -351,17 +349,18 @@ class InstallerApp:
                 for i, det_cls in enumerate(DETECTORS, 1):
                     det = det_cls()
                     name = det.name
-                    # Update "checking" status
                     self.root.after(0, lambda n=name, idx=i, t=total:
                         self._set_progress(idx, t, n, None))
                     status, detail = det.detect()
                     self.results.append((name, status, detail))
-                    # Update with result
-                    self.root.after(0, lambda n=name, s=status, idx=i, t=total:
-                        self._set_progress(idx, t, n, s))
+                    self.root.after(0, lambda n=name, s=status, d=detail, idx=i, t=total:
+                        self._set_progress(idx, t, n, s, d))
             except Exception as e:
+                import traceback
+                err_msg = traceback.format_exc()
+                self.logger.error(f"Detection error: {err_msg}")
                 self.results.clear()
-                self.root.after(0, lambda e=e: self._set_status(f"检测失败: {e}"))
+                self.root.after(0, lambda e=err_msg: self._set_status(f"检测失败: {e}"))
             finally:
                 self.root.after(0, self._on_detection_complete)
 

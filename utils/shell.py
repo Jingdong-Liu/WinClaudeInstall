@@ -60,11 +60,12 @@ def run_quiet(cmd: str, cwd=None, timeout=300) -> tuple[int, str]:
             shell=True,
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             cwd=cwd,
             timeout=timeout,
         )
-        output = (result.stdout or "") + (result.stderr or "")
-        return result.returncode, output.strip()
+        return result.returncode, (result.stdout or "").strip()
     except subprocess.TimeoutExpired:
         logger.warning(f"Command timed out: {cmd}")
         return -1, "Command timed out"

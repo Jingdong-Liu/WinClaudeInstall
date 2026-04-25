@@ -14,7 +14,7 @@ class CCSwitchDetector(Detector):
         # Check if cc-switch is in npm global packages
         code, output = run_quiet("npm list -g cc-switch")
         if code == 0:
-            return Status.ok, "installed via npm"
+            return Status.OK, "installed via npm"
 
         # Check Windows Start Menu / Program Files for CC-Switch
         prog_files = os.environ.get("ProgramFiles", r"C:\Program Files")
@@ -24,6 +24,6 @@ class CCSwitchDetector(Detector):
         ]
         for p in cc_switch_paths:
             if os.path.exists(p):
-                return Status.ok, "installed"
+                return Status.OK, "installed"
 
-        return Status.missing, "not installed"
+        return Status.MISSING, "not installed"

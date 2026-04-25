@@ -13,7 +13,7 @@ class ClaudeCodeDetector(Detector):
         code, output = run_quiet("claude --version")
         if code == 0:
             version = output.strip().split("\n")[-1].strip()
-            return Status.ok, version
+            return Status.OK, version
         # Try npm list as fallback
         code2, output2 = run_quiet("npm list -g @anthropic-ai/claude-code")
         if code2 == 0:
@@ -22,6 +22,6 @@ class ClaudeCodeDetector(Detector):
                 if "@anthropic-ai/claude-code" in line:
                     parts = line.split("@")
                     if len(parts) >= 3:
-                        return Status.ok, f"v{parts[-1]}"
-            return Status.ok, "installed"
-        return Status.missing, "not installed"
+                        return Status.OK, f"v{parts[-1]}"
+            return Status.OK, "installed"
+        return Status.MISSING, "not installed"

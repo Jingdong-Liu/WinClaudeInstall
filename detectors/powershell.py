@@ -8,8 +8,8 @@ class PowerShellDetector(Detector):
         return "PowerShell"
 
     def detect(self) -> tuple[Status, str]:
-        for cmd in ["pwsh -Command '$PSVersionTable.PSVersion.ToString()'",
-                     "powershell -Command '$PSVersionTable.PSVersion.ToString()'"]:
+        for cmd in ['pwsh -Command "$PSVersionTable.PSVersion.ToString()"',
+                     'powershell -Command "$PSVersionTable.PSVersion.ToString()"']:
             code, output = run_quiet(cmd)
             if code == 0 and output.strip():
                 version = output.strip()
