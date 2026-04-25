@@ -198,15 +198,21 @@ class InstallerApp:
         progress_frame = ttk.Frame(self.root)
         progress_frame.grid(row=1, column=0, sticky="ew", padx=PADDING_WINDOW, pady=(0, 8))
         progress_frame.columnconfigure(0, weight=1)
+        progress_frame.columnconfigure(1, weight=0)
 
         self.progress_bar = ttk.Progressbar(progress_frame, mode="determinate",
                                              maximum=len(DEPENDENCIES))
         self.progress_bar.grid(row=0, column=0, sticky="ew")
 
+        # Dog emoji on the right side of the progress bar
+        self.dog_label = tk.Label(progress_frame, text="\U0001f436", bg=BG,
+                                   font=("Segoe UI Emoji", 14))
+        self.dog_label.grid(row=0, column=1, sticky="w", padx=(4, 0))
+
         self.progress_label = tk.Label(progress_frame, text="", bg=BG,
                                         fg=TEXT_PRIMARY, font=("Segoe UI", 10),
                                         anchor="w", justify="left")
-        self.progress_label.grid(row=1, column=0, sticky="w", pady=(4, 0))
+        self.progress_label.grid(row=1, column=0, columnspan=2, sticky="w", pady=(4, 0))
 
     def _build_table_area(self, parent):
         """Build the dependency table with per-row install buttons as 4th column."""
@@ -292,9 +298,6 @@ class InstallerApp:
         self._spinner_idx = (self._spinner_idx + 1) % len(SPINNER)
         self._spinner_after = self.root.after(150, self._animate_spinner)
 
-        # Also update progress_label during spinner
-        self.progress_label.configure(text=f"{frame} {self._spinner_message}")
-
     def _stop_spinner(self):
         """Stop the animated activity label."""
         if self._spinner_after:
@@ -303,7 +306,7 @@ class InstallerApp:
 
     def _set_progress(self, current: int, total: int, name: str, status=None, detail=""):
         """Update progress bar, terminal output, and table in real-time."""
-        self.progress_bar["value"] = current
+        self.progress_bar["value"] = current - 1 if current > 0 else 0
         if status is not None:
             status_str = status.value if hasattr(status, 'value') else str(status).lower()
             status_icon = STATUS_ICONS.get(status_str, "—")
@@ -314,6 +317,8 @@ class InstallerApp:
             detail_text = f"{name} → {version}" if status_str == "ok" else f"{name} → 未安装"
             self._write_terminal(f"  {icon} {detail_text}\n",
                                  color="ok" if status_str == "ok" else "error")
+            # Update progress label with completed detection
+            self.progress_label.configure(text=f"正在检测: {name} ({current}/{total})")
         else:
             self.progress_label.configure(text=f"正在检测: {name} ({current}/{total})")
             cmd = DETECT_CMDS.get(name, "")
@@ -401,6 +406,9 @@ class InstallerApp:
             (s.value if hasattr(s, 'value') else str(s).lower()) in ("missing", "warning")
             for _, s, _ in self.results
         )
+
+        # Fill progress bar to 100%
+        self.progress_bar["value"] = len(DEPENDENCIES)
 
         if not self.results:
             self.result_label.configure(text="检测失败", fg=MISSING_COLOR)
