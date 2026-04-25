@@ -15,8 +15,8 @@ class PowerShellDetector(Detector):
                 version = output.strip()
                 try:
                     major = int(version.split(".")[0])
-                    if major < 7:
-                        return Status.WARNING, f"Windows PowerShell {version} (PS7+ recommended)"
+                    if major < 5:
+                        return Status.WARNING, f"PowerShell {version} (5+ recommended)"
                 except (ValueError, IndexError):
                     pass
                 return Status.OK, f"{version}"

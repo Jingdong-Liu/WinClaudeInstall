@@ -16,11 +16,18 @@ class CCSwitchDetector(Detector):
         if code == 0:
             return Status.OK, "installed via npm"
 
-        # Check Windows Start Menu / Program Files for CC-Switch
+        # Check Windows Start Menu shortcut for CC-Switch
+        appdata = os.environ.get("APPDATA", "")
+        start_menu = os.path.join(appdata, "Microsoft", "Windows", "Start Menu", "Programs", "CC Switch")
+        if os.path.exists(start_menu):
+            return Status.OK, "installed"
+
+        # Check Program Files
         prog_files = os.environ.get("ProgramFiles", r"C:\Program Files")
         cc_switch_paths = [
             os.path.join(prog_files, "CC-Switch"),
             os.path.join(os.environ.get("LOCALAPPDATA", ""), "Programs", "cc-switch"),
+            os.path.join(os.environ.get("LOCALAPPDATA", ""), "Programs", "CC-Switch"),
         ]
         for p in cc_switch_paths:
             if os.path.exists(p):
