@@ -227,7 +227,7 @@ class InstallerApp:
         self.dep_table.column("name", width=160, minwidth=90, anchor="center")
         self.dep_table.column("status", width=120, minwidth=80, anchor="center")
         self.dep_table.column("version", width=140, minwidth=70, anchor="center")
-        self.dep_table.column("action", width=90, minwidth=60, anchor="center")
+        self.dep_table.column("action", width=110, minwidth=70, anchor="center")
 
         self.dep_table.grid(row=0, column=0, sticky="nsew")
 
@@ -291,6 +291,9 @@ class InstallerApp:
         self.result_label.configure(text=f"{frame} {self._spinner_message}")
         self._spinner_idx = (self._spinner_idx + 1) % len(SPINNER)
         self._spinner_after = self.root.after(150, self._animate_spinner)
+
+        # Also update progress_label during spinner
+        self.progress_label.configure(text=f"{frame} {self._spinner_message}")
 
     def _stop_spinner(self):
         """Stop the animated activity label."""
@@ -426,7 +429,7 @@ class InstallerApp:
 
         for name, status, detail in self.results:
             status_str = status.value if hasattr(status, 'value') else str(status).lower()
-            btn_text = "安装" if status_str in ("missing", "warning") else "重新安装"
+            btn_text = "安装" if status_str in ("missing", "warning") else "重装"
             btn = ttk.Button(self.dep_table, text=btn_text,
                               style="Install.TButton",
                               command=lambda n=name: self._install_single(n))
