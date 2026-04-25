@@ -3,6 +3,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 import threading
+import os
 
 from detectors import (
     Detector, Status,
@@ -180,67 +181,78 @@ class InstallerApp:
                                              maximum=len(DEPENDENCIES))
         self.progress_bar.pack(fill="x", side="top")
 
-        # Cartoon dog canvas overlayed on progress bar tip
-        self.dog_canvas = tk.Canvas(progress_frame, width=24, height=22,
-                                     bg=BG, highlightthickness=0, bd=0)
-        self._draw_dog()
-        self.dog_canvas.place(x=0, y=0, width=24, height=22)
+        # Dog running GIF overlayed on progress bar tip
+        dog_gif_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                     "assets", "dog_running.gif")
+        self.dog_frames = []
+        if os.path.exists(dog_gif_path):
+            self.dog_gif = tk.PhotoImage(file=dog_gif_path)
+            # Extract all frames
+            try:
+                idx = 0
+                while True:
+                    frame = self.dog_gif.copy()
+                    frame.configure(format=f"gif -index {idx}")
+                    self.dog_frames.append(frame)
+                    idx += 1
+            except Exception:
+                self.dog_frames = [self.dog_gif]
+        else:
+            self.dog_frames = [None]
+            self.dog_gif = None
+
+        self.dog_label = tk.Label(progress_frame, bg=BG, image=self.dog_frames[0] if self.dog_frames[0] else None)
+        self.dog_label.place(x=0, y=0, width=40, height=32)
+
+        # Animate dog GIF
+        self._dog_frame_idx = 0
+        self._animate_dog()
 
         self.progress_label = tk.Label(progress_frame, text="", bg=BG,
                                         fg=TEXT_PRIMARY, font=("Segoe UI", 10),
                                         anchor="w", justify="left")
         self.progress_label.pack(fill="x", side="top", pady=(4, 0))
 
-        # Reposition dog canvas when progress bar updates
+        # Reposition dog label when progress bar updates
         self.progress_bar.bind("<Configure>", self._reposition_dog)
-        # Also reposition after a short delay for initial layout
         self.progress_bar.after(200, self._reposition_dog)
 
-    def _draw_dog(self):
-        """Draw a cartoon dog head (WeChat style) on the dog canvas."""
-        c = self.dog_canvas
-        # Dog head - round tan face
-        c.create_oval(2, 2, 22, 20, fill="#e8b960", outline="#c4943e", width=1)
-        # Left ear - floppy triangle
-        c.create_polygon(2, 6, 0, 14, 6, 8, fill="#c4943e", outline="#a07830", width=1)
-        # Right ear - floppy triangle
-        c.create_polygon(22, 6, 24, 14, 18, 8, fill="#c4943e", outline="#a07830", width=1)
-        # Eyes - two dots with eyebrows (doge style)
-        c.create_oval(7, 8, 10, 11, fill="#333", outline="")
-        c.create_oval(14, 8, 17, 11, fill="#333", outline="")
-        # Small eyebrows (the classic doge expression)
-        c.create_line(6, 7, 11, 6, fill="#333", width=1)
-        c.create_line(13, 6, 18, 7, fill="#333", width=1)
-        # Nose
-        c.create_oval(10, 12, 14, 15, fill="#333", outline="")
-        # Mouth - simple curve
-        c.create_arc(9, 14, 15, 19, start=180, extent=180, outline="#333", width=1)
+    def _animate_dog(self):
+        """Cycle through dog GIF frames to animate running."""
+        if len(self.dog_frames) > 1:
+            self._dog_frame_idx = (self._dog_frame_idx + 1) % len(self.dog_frames)
+            self.dog_label.configure(image=self.dog_frames[self._dog_frame_idx])
+        self.root.after(120, self._animate_dog)
 
     def _build_button_row(self, parent):
         """Build the button row at top of content area."""
         btn_frame = tk.Frame(parent, bg=BG)
         btn_frame.pack(fill="x", pady=(0, 8))
 
-        # Detect button - standalone pill
+        # Detect button - standalone pill with matching border
         detect_bg = tk.Frame(btn_frame, bg=BUTTON_BG, bd=0, relief="flat", padx=12, pady=4)
         detect_bg.pack(side="left", padx=0)
         self.detect_btn = tk.Button(detect_bg, text=" 一键自动检测 ",
                                      bg=BUTTON_BG, fg="white", font=FONT_BTN,
                                      activebackground=BUTTON_SHADOW, activeforeground="white",
-                                     bd=0, cursor="hand2", relief="flat",
+                                     bd=2, cursor="hand2", relief="raised",
+                                     highlightthickness=0, border=2,
+                                     highlightbackground=BUTTON_BG,
                                      command=self._auto_detect)
         self.detect_btn.pack(side="left")
 
         # White gap between buttons
         tk.Label(btn_frame, text="   ", bg="white").pack(side="left", padx=0)
 
-        # Install button - standalone pill
+        # Install button - standalone pill with matching border
         install_bg = tk.Frame(btn_frame, bg=BUTTON_BG, bd=0, relief="flat", padx=12, pady=4)
         install_bg.pack(side="left", padx=0)
         self.install_btn = tk.Button(install_bg, text=" 一键安装 ",
                                       bg=BUTTON_BG, fg="white", font=FONT_BTN,
                                       activebackground=BUTTON_SHADOW, activeforeground="white",
-                                      bd=0, cursor="hand2", relief="flat",
+                                      bd=2, cursor="hand2", relief="raised",
+                                      highlightthickness=0, border=2,
+                                      highlightbackground=BUTTON_BG,
                                       command=self._start_install)
         self.install_btn.pack(side="left")
 
@@ -250,7 +262,7 @@ class InstallerApp:
         self.result_label.pack(side="right", fill="x", expand=True)
 
     def _reposition_dog(self, event=None):
-        """Move dog canvas to the tip of the progress bar fill, keeping it visible."""
+        """Move dog GIF to the tip of the progress bar fill, keeping it visible."""
         try:
             bar_w = self.progress_bar.winfo_width()
             bar_h = self.progress_bar.winfo_height()
@@ -259,17 +271,17 @@ class InstallerApp:
             if max_val == 0 or bar_w <= 0:
                 return
             ratio = value / max_val
-            dog_w = 24
-            dog_h = 22
+            dog_w = 40
+            dog_h = 32
             # Position at the tip of the fill
             dog_x = int(ratio * bar_w - dog_w // 2)
             # Keep dog visible: clamp so right edge isn't clipped by window border
-            max_x = bar_w - dog_w - 2
+            max_x = bar_w - dog_w - 4
             dog_x = min(dog_x, max_x)
             dog_x = max(dog_x, 0)
             # Vertically centered on the progress bar
             dog_y = max(0, (bar_h - dog_h) // 2)
-            self.dog_canvas.place(x=dog_x, y=dog_y, width=dog_w, height=dog_h)
+            self.dog_label.place(x=dog_x, y=dog_y, width=dog_w, height=dog_h)
         except Exception:
             pass
 
@@ -409,7 +421,8 @@ class InstallerApp:
         self.result_label.configure(text="", fg=BG)
         self._clear_terminal()
 
-        self.detect_btn.configure(bg=WARNING_COLOR, state="disabled")
+        self.detect_btn.configure(bg=WARNING_COLOR, state="disabled",
+                                   highlightbackground=WARNING_COLOR)
 
         self._start_spinner("检测中")
 
@@ -440,7 +453,7 @@ class InstallerApp:
     def _on_detection_complete(self):
         """Handle detection completion."""
         self._stop_spinner()
-        self.detect_btn.configure(bg=BUTTON_BG)
+        self.detect_btn.configure(bg=BUTTON_BG, highlightbackground=BUTTON_BG)
 
         # Update table rows with results + tags
         for name, status, detail in self.results:
