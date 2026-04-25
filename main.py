@@ -67,6 +67,19 @@ STATUS_ICONS = {
 # Activity spinner frames
 SPINNER = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
 
+# ── Detection Commands ────────────────────────────────────
+DETECT_CMDS = {
+    "PowerShell": ["pwsh -Command '$PSVersionTable.PSVersion.ToString()'",
+                   "powershell -Command '$PSVersionTable.PSVersion.ToString()'"],
+    "Python": "python --version",
+    "Node.js": "node --version",
+    "Git": "git --version",
+    "Bash": "bash --version",
+    "npm": "npm --version",
+    "Claude Code": "claude --version",
+    "CC-Switch": "npm list -g cc-switch",
+}
+
 
 class InstallerApp:
     """主应用程序窗口."""
@@ -221,6 +234,14 @@ class InstallerApp:
                                       state="disabled", height=8)
         self.terminal_text.pack(fill="both", expand=True)
 
+        # Pre-configure terminal text tags
+        self.terminal_text.tag_configure("info", foreground="#569cd6")
+        self.terminal_text.tag_configure("ok", foreground="#4ec9b0")
+        self.terminal_text.tag_configure("error", foreground="#f44747")
+        self.terminal_text.tag_configure("command", foreground="#ce9178")
+        self.terminal_text.tag_configure("normal", foreground="#d4d4d4")
+        self.terminal_text.tag_configure("detail", foreground="#6a9955")
+
         # ── Status Bar ──
         sep = tk.Frame(self.root, height=1, bg=BORDER)
         sep.grid(row=4, column=0, sticky="ew", pady=(0, 0))
@@ -276,24 +297,21 @@ class InstallerApp:
 
             # Update terminal with result
             icon = STATUS_ICONS.get(status_str, "?")
-            self._write_terminal(f"  {icon} {name} → {version if status_str == 'ok' else '未安装'}\n",
+            detail_text = f"{name} → {version}" if status_str == "ok" else f"{name} → 未安装"
+            self._write_terminal(f"  {icon} {detail_text}\n",
                                  color="ok" if status_str == "ok" else "error")
         else:
             self.progress_label.configure(text=f"正在检测: {name} ({current}/{total})")
-            self._write_terminal(f"→ 检测 {name}...\n", color="info")
+            cmd = DETECT_CMDS.get(name, "")
+            if isinstance(cmd, list):
+                cmd = cmd[0]
+            self._write_terminal(f"> {cmd}\n", color="command")
+            self._write_terminal(f"  检测 {name}...\n", color="info")
 
     def _write_terminal(self, text: str, color: str = "normal"):
         """Append text to the terminal widget with color."""
-        color_map = {
-            "normal": "#d4d4d4",
-            "info": "#569cd6",
-            "ok": "#4ec9b0",
-            "error": "#f44747",
-            "command": "#ce9178",
-        }
         self.terminal_text.configure(state="normal")
         self.terminal_text.insert("end", text, color)
-        self.terminal_text.tag_configure(color, foreground=color_map.get(color, "#d4d4d4"))
         self.terminal_text.see("end")
         self.terminal_text.configure(state="disabled")
 
