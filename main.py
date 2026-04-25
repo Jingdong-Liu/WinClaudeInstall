@@ -211,7 +211,7 @@ class InstallerApp:
                                      command=self._auto_detect)
         self.detect_btn.pack(side="left")
 
-        tk.Frame(btn_container, width=1, bg=BUTTON_SHADOW).pack(side="left", padx=0, fill="y")
+        tk.Frame(btn_container, width=24, bg=BUTTON_SHADOW).pack(side="left", padx=0, fill="y")
 
         self.install_btn = tk.Button(btn_container, text=" 一键安装 ",
                                       bg=BUTTON_BG, fg="white", font=FONT_BTN,
@@ -226,7 +226,7 @@ class InstallerApp:
         self.result_label.pack(side="right", fill="x", expand=True)
 
     def _reposition_dog(self, event=None):
-        """Move dog emoji to the tip of the progress bar fill."""
+        """Move dog emoji to the tip of the progress bar fill, keeping it visible."""
         try:
             bar_x = self.progress_bar.winfo_x()
             bar_w = self.progress_bar.winfo_width()
@@ -237,8 +237,12 @@ class InstallerApp:
                 return
             ratio = value / max_val
             dog_w = self.dog_label.winfo_reqwidth()
-            # Position at the tip of the fill (ratio * bar_width)
+            # Position at the tip of the fill
             dog_x = int(bar_x + ratio * bar_w - dog_w // 2)
+            # Keep dog visible: clamp so right edge isn't clipped by window border
+            max_x = bar_w - dog_w - 2
+            dog_x = min(dog_x, max_x)
+            dog_x = max(dog_x, 0)
             # Vertically centered on the progress bar
             dog_y = max(0, (bar_h - 22) // 2)
             self.dog_label.place(x=dog_x, y=dog_y, width=dog_w, height=22)
