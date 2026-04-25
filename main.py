@@ -130,10 +130,11 @@ class InstallerApp:
         """构建主界面."""
         self.root.configure(background=BG)
 
-        # Main layout: 3 rows (content, progress, status bar)
+        # Main layout: 4 rows (content, progress, terminal, status bar)
         self.root.rowconfigure(0, weight=1)
         self.root.rowconfigure(1, weight=0)  # progress section
-        self.root.rowconfigure(2, weight=0)  # status bar
+        self.root.rowconfigure(2, weight=0)  # terminal section
+        self.root.rowconfigure(3, weight=0)  # status bar
         self.root.columnconfigure(0, weight=1)
 
         # ── Content Area ──
@@ -202,13 +203,31 @@ class InstallerApp:
                                         anchor="w", justify="left")
         self.progress_label.grid(row=1, column=0, sticky="w", pady=(4, 0))
 
+        # ── Terminal Output (below progress bar) ──
+        terminal_frame = ttk.Frame(self.root)
+        terminal_frame.grid(row=3, column=0, sticky="nsew", padx=PADDING_WINDOW, pady=(0, 0))
+
+        terminal_header = tk.Label(terminal_frame, text="检测过程", bg=BG,
+                                    fg=TEXT_SECONDARY, font=("Segoe UI", 10, "bold"),
+                                    anchor="w")
+        terminal_header.pack(fill="x")
+
+        terminal_inner = tk.Frame(terminal_frame, bg="#1e1e1e", bd=1, relief="sunken")
+        terminal_inner.pack(fill="both", expand=True)
+
+        self.terminal_text = tk.Text(terminal_inner, bg="#1e1e1e", fg="#d4d4d4",
+                                      font=("Cascadia Code", 10, "normal"),
+                                      bd=0, highlightthickness=0, wrap="word",
+                                      state="disabled", height=8)
+        self.terminal_text.pack(fill="both", expand=True)
+
         # ── Status Bar ──
         sep = tk.Frame(self.root, height=1, bg=BORDER)
-        sep.grid(row=2, column=0, sticky="ew", pady=(0, 0))
+        sep.grid(row=4, column=0, sticky="ew", pady=(0, 0))
 
         self.status_label = ttk.Label(self.root, text="就绪",
                                        style="Status.TLabel", anchor="center")
-        self.status_label.grid(row=2, column=0, sticky="ew", padx=PADDING_WINDOW, pady=8)
+        self.status_label.grid(row=4, column=0, sticky="ew", padx=PADDING_WINDOW, pady=8)
 
     def _prepopulate_table(self):
         """Pre-fill the table with all dependencies."""
@@ -246,14 +265,43 @@ class InstallerApp:
         self.status_label.configure(text=message)
 
     def _set_progress(self, current: int, total: int, name: str, status=None):
-        """Update progress bar and real-time results list."""
+        """Update progress bar, terminal output, and table in real-time."""
         self.progress_bar["value"] = current
         if status is not None:
-            icon = STATUS_ICONS.get(status.value if hasattr(status, 'value') else str(status).lower(), "?")
-            self._progress_lines.append(f"{icon} {name}")
-            self.progress_label.configure(text="\n".join(self._progress_lines[-8:]))
+            # Update table row immediately
+            status_str = status.value if hasattr(status, 'value') else str(status).lower()
+            status_icon = STATUS_ICONS.get(status_str, "—")
+            version = status_str == "ok" and (name in [d for d in self.results if d[0] == name][0][2] if any(d[0] == name for d in self.results) else "—") or "—"
+            self._update_row(name, status_icon, version)
+
+            # Update terminal with result
+            icon = STATUS_ICONS.get(status_str, "?")
+            self._write_terminal(f"  {icon} {name} → {version if status_str == 'ok' else '未安装'}\n",
+                                 color="ok" if status_str == "ok" else "error")
         else:
             self.progress_label.configure(text=f"正在检测: {name} ({current}/{total})")
+            self._write_terminal(f"→ 检测 {name}...\n", color="info")
+
+    def _write_terminal(self, text: str, color: str = "normal"):
+        """Append text to the terminal widget with color."""
+        color_map = {
+            "normal": "#d4d4d4",
+            "info": "#569cd6",
+            "ok": "#4ec9b0",
+            "error": "#f44747",
+            "command": "#ce9178",
+        }
+        self.terminal_text.configure(state="normal")
+        self.terminal_text.insert("end", text, color)
+        self.terminal_text.tag_configure(color, foreground=color_map.get(color, "#d4d4d4"))
+        self.terminal_text.see("end")
+        self.terminal_text.configure(state="disabled")
+
+    def _clear_terminal(self):
+        """Clear the terminal output."""
+        self.terminal_text.configure(state="normal")
+        self.terminal_text.delete("1.0", "end")
+        self.terminal_text.configure(state="disabled")
 
     # ── Detection ───────────────────────────────────────────
 
@@ -269,6 +317,7 @@ class InstallerApp:
         self.progress_bar["value"] = 0
         self.progress_label.configure(text="")
         self.result_label.configure(text="", bg=BUTTON_BG)
+        self._clear_terminal()
 
         self.detect_btn.configure(style="Detecting.TButton")
         self.install_btn.configure(state="disabled")
