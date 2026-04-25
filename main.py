@@ -23,7 +23,6 @@ DETECTORS = [
     CCSwitchDetector,
 ]
 
-# 依赖按「从基础到最终」排序
 DEPENDENCIES = [
     "PowerShell",
     "Python",
@@ -48,26 +47,20 @@ WARNING_COLOR = "#f59e0b"
 BUTTON_BG = "#4f63e3"
 BUTTON_SHADOW = "#3b82f6"
 
-# ── Font Config ────────────────────────────────────────────
 FONT_BTN = ("Segoe UI", 14, "bold")
 FONT_STATUS = ("Segoe UI", 11, "normal")
 FONT_SECTION = ("Segoe UI", 11, "bold")
-FONT_ACTIVITY = ("Segoe UI", 12, "normal")
 
-# ── Spacing ────────────────────────────────────────────────
 PADDING_WINDOW = 16
 
-# ── Status Display ─────────────────────────────────────────
 STATUS_ICONS = {
     "ok": "✓",
     "missing": "✗",
     "warning": "⚠",
 }
 
-# Activity spinner frames
 SPINNER = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
 
-# ── Detection Commands ────────────────────────────────────
 DETECT_CMDS = {
     "PowerShell": ["pwsh -Command '$PSVersionTable.PSVersion.ToString()'",
                    "powershell -Command '$PSVersionTable.PSVersion.ToString()'"],
@@ -95,6 +88,7 @@ class InstallerApp:
         self._spinner_idx = 0
         self._spinner_after = None
         self._progress_lines: list = []
+        self._row_buttons: dict = {}  # name -> button widget
 
         self._setup_style()
         self._build_ui()
@@ -120,15 +114,12 @@ class InstallerApp:
         style.configure("Status.TLabel", background=CARD_BG, foreground=TEXT_SECONDARY,
                         font=FONT_STATUS)
 
-        style.configure("Activity.TLabel", background=CARD_BG, foreground=TEXT_PRIMARY,
-                        font=FONT_ACTIVITY)
-
-        style.configure("Table.Treeview", background=CARD_BG, foreground=TEXT_PRIMARY,
-                        fieldbackground=CARD_BG, font=("Segoe UI", 11))
-        style.configure("Table.Treeview.Heading", background=CARD_BG, foreground=TEXT_SECONDARY,
-                        font=FONT_SECTION, borderwidth=0)
-        style.map("Table.Treeview.Heading",
-                  background=[("active", BG)])
+        style.configure("Install.TButton", background=BUTTON_BG, foreground="white",
+                        font=("Segoe UI", 9, "normal"), borderwidth=0, focuscolor="none",
+                        padding=(6, 3))
+        style.map("Install.TButton",
+                  background=[("active", BUTTON_SHADOW), ("pressed", "#3730a3")],
+                  foreground=[("active", "white")])
 
         style.configure("Detecting.TButton", background="#f59e0b", foreground="white",
                         font=("Segoe UI", 13, "bold"), borderwidth=0, focuscolor="none",
@@ -136,6 +127,13 @@ class InstallerApp:
         style.map("Detecting.TButton",
                   background=[("active", "#d97706"), ("disabled", "#fbbf24")],
                   foreground=[("active", "white")])
+
+        style.configure("Table.Treeview", background=CARD_BG, foreground=TEXT_PRIMARY,
+                        fieldbackground=CARD_BG, font=("Segoe UI", 11))
+        style.configure("Table.Treeview.Heading", background=CARD_BG, foreground=TEXT_SECONDARY,
+                        font=FONT_SECTION, borderwidth=0)
+        style.map("Table.Treeview.Heading",
+                  background=[("active", BG)])
 
     # ── UI Building ─────────────────────────────────────────
 
@@ -145,8 +143,8 @@ class InstallerApp:
 
         # Main layout: 4 rows (content, progress, terminal, status bar)
         self.root.rowconfigure(0, weight=1)
-        self.root.rowconfigure(1, weight=0)  # progress section
-        self.root.rowconfigure(2, weight=0)  # terminal section
+        self.root.rowconfigure(1, weight=0)  # progress
+        self.root.rowconfigure(2, weight=0)  # terminal
         self.root.rowconfigure(3, weight=0)  # status bar
         self.root.columnconfigure(0, weight=1)
 
@@ -165,13 +163,9 @@ class InstallerApp:
                                       style="Action.TButton", command=self._auto_detect)
         self.detect_btn.pack(side="left", padx=(0, 8))
 
-        self.install_btn = ttk.Button(btn_frame, text="安装",
+        self.install_btn = ttk.Button(btn_frame, text="一键安装",
                                        style="Action.TButton", command=self._start_install)
-        self.install_btn.pack(side="left", padx=(0, 8))
-
-        self.download_install_btn = ttk.Button(btn_frame, text="下载并安装依赖",
-                                                style="Action.TButton", command=self._download_and_install)
-        self.download_install_btn.pack(side="left")
+        self.install_btn.pack(side="left")
 
         # Result label (right-aligned)
         self.result_label = tk.Label(btn_frame, text="", bg=BUTTON_BG, fg="white",
@@ -180,32 +174,12 @@ class InstallerApp:
         self.result_label.pack(side="right")
 
         # ── Table ──
-        table_frame = ttk.Frame(content)
-        table_frame.grid(row=1, column=0, sticky="nsew")
-        table_frame.columnconfigure(0, weight=1)
-        table_frame.rowconfigure(0, weight=1)
+        self._build_table_area(content)
 
-        self.dep_table = ttk.Treeview(table_frame, columns=("name", "status", "version"),
-                                       show="headings", height=14, style="Table.Treeview")
-
-        self.dep_table.heading("name", text="依赖")
-        self.dep_table.heading("status", text="是否完成安装")
-        self.dep_table.heading("version", text="版本")
-
-        self.dep_table.column("name", width=200, minwidth=120, anchor="center")
-        self.dep_table.column("status", width=130, minwidth=100, anchor="center")
-        self.dep_table.column("version", width=150, minwidth=80, anchor="center")
-
-        self.dep_table.grid(row=0, column=0, sticky="nsew")
-
-        scrollbar = ttk.Scrollbar(table_frame, orient="vertical",
-                                   command=self.dep_table.yview)
-        scrollbar.grid(row=0, column=1, sticky="ns")
-        self.dep_table.configure(yscrollcommand=scrollbar.set)
-
-        # ── Progress Section (below table) ──
+        # ── Progress Section (full width) ──
         progress_frame = ttk.Frame(self.root)
         progress_frame.grid(row=1, column=0, sticky="ew", padx=PADDING_WINDOW, pady=(0, 4))
+        progress_frame.columnconfigure(0, weight=1)
 
         self.progress_bar = ttk.Progressbar(progress_frame, mode="determinate",
                                              maximum=len(DEPENDENCIES))
@@ -216,22 +190,24 @@ class InstallerApp:
                                         anchor="w", justify="left")
         self.progress_label.grid(row=1, column=0, sticky="w", pady=(4, 0))
 
-        # ── Terminal Output (below progress bar) ──
+        # ── Terminal Output ──
         terminal_frame = ttk.Frame(self.root)
-        terminal_frame.grid(row=3, column=0, sticky="nsew", padx=PADDING_WINDOW, pady=(0, 0))
+        terminal_frame.grid(row=2, column=0, sticky="nsew", padx=PADDING_WINDOW, pady=(0, 0))
+        terminal_frame.columnconfigure(0, weight=1)
+        terminal_frame.rowconfigure(1, weight=1)
 
         terminal_header = tk.Label(terminal_frame, text="检测过程", bg=BG,
                                     fg=TEXT_SECONDARY, font=("Segoe UI", 10, "bold"),
                                     anchor="w")
-        terminal_header.pack(fill="x")
+        terminal_header.grid(row=0, column=0, sticky="ew")
 
         terminal_inner = tk.Frame(terminal_frame, bg="#1e1e1e", bd=1, relief="sunken")
-        terminal_inner.pack(fill="both", expand=True)
+        terminal_inner.grid(row=1, column=0, sticky="nsew")
 
         self.terminal_text = tk.Text(terminal_inner, bg="#1e1e1e", fg="#d4d4d4",
                                       font=("Cascadia Code", 10, "normal"),
                                       bd=0, highlightthickness=0, wrap="word",
-                                      state="disabled", height=8)
+                                      state="disabled", height=6)
         self.terminal_text.pack(fill="both", expand=True)
 
         # Pre-configure terminal text tags
@@ -244,11 +220,43 @@ class InstallerApp:
 
         # ── Status Bar ──
         sep = tk.Frame(self.root, height=1, bg=BORDER)
-        sep.grid(row=4, column=0, sticky="ew", pady=(0, 0))
+        sep.grid(row=3, column=0, sticky="ew", pady=(0, 0))
 
         self.status_label = ttk.Label(self.root, text="就绪",
                                        style="Status.TLabel", anchor="center")
-        self.status_label.grid(row=4, column=0, sticky="ew", padx=PADDING_WINDOW, pady=8)
+        self.status_label.grid(row=3, column=0, sticky="ew", padx=PADDING_WINDOW, pady=8)
+
+    def _build_table_area(self, parent):
+        """Build the dependency table with per-row install buttons."""
+        table_frame = ttk.Frame(parent)
+        table_frame.grid(row=1, column=0, sticky="nsew")
+
+        # Treeview columns: 依赖, 是否完成安装, 版本
+        self.dep_table = ttk.Treeview(table_frame, columns=("name", "status", "version"),
+                                       show="headings", height=14, style="Table.Treeview")
+
+        self.dep_table.heading("name", text="依赖")
+        self.dep_table.heading("status", text="是否完成安装")
+        self.dep_table.heading("version", text="版本")
+
+        self.dep_table.column("name", width=180, minwidth=100, anchor="center")
+        self.dep_table.column("status", width=130, minwidth=80, anchor="center")
+        self.dep_table.column("version", width=150, minwidth=80, anchor="center")
+
+        # Scrollable container for buttons on the right
+        self.dep_table.grid(row=0, column=0, sticky="nsew")
+
+        scrollbar = ttk.Scrollbar(table_frame, orient="vertical",
+                                   command=self.dep_table.yview)
+        scrollbar.grid(row=0, column=1, sticky="ns")
+        self.dep_table.configure(yscrollcommand=scrollbar.set)
+
+        # Right column: install buttons frame
+        btn_col = tk.Frame(table_frame, bg=BG, width=80)
+        btn_col.grid(row=0, column=2, sticky="ns")
+        btn_col.grid_propagate(False)
+
+        self._row_button_frame = btn_col
 
     def _prepopulate_table(self):
         """Pre-fill the table with all dependencies."""
@@ -336,9 +344,8 @@ class InstallerApp:
         self._clear_terminal()
 
         self.detect_btn.configure(style="Detecting.TButton")
-        self.install_btn.configure(state="disabled")
         self.detect_btn.configure(state="disabled")
-        self.download_install_btn.configure(state="disabled")
+
         self._set_status("正在检测环境，请稍候...")
         self._start_spinner("检测中")
 
@@ -396,13 +403,77 @@ class InstallerApp:
             self._set_status("所有依赖已就绪，无需安装")
             self.result_label.configure(text="检测完成：全部就绪", bg=OK_COLOR)
         else:
-            self._set_status("检测到需要安装的组件，请点击「安装」")
+            self._set_status("检测到需要安装的组件，请点击「一键安装」")
             self.result_label.configure(text="部分需要安装", bg=WARNING_COLOR)
 
-        self.install_btn.configure(state="normal" if has_issues else "disabled")
+        # Update per-row install buttons
+        self._update_row_buttons(has_issues)
+
         self.detect_btn.configure(state="normal")
-        self.download_install_btn.configure(state="normal" if has_issues else "disabled")
         self._detecting = False
+
+    def _update_row_buttons(self, has_issues):
+        """Create/update per-row install buttons in the right column."""
+        # Destroy old buttons
+        for w in self._row_button_frame.winfo_children():
+            w.destroy()
+        self._row_button_buttons = {}
+
+        # Calculate row heights based on treeview
+        row_count = len(DEPENDENCIES)
+        frame_height = self._row_button_frame.winfo_height()
+        if frame_height == 1:
+            frame_height = 350  # default fallback
+        row_height = frame_height / row_count
+
+        for name, status, detail in self.results:
+            status_str = status.value if hasattr(status, 'value') else str(status).lower()
+            if status_str in ("missing", "warning"):
+                btn = ttk.Button(self._row_button_frame, text="安装",
+                                  style="Install.TButton",
+                                  command=lambda n=name: self._install_single(n))
+                btn.pack(side="top", fill="x", padx=(4, 4),
+                         pady=(2, 0))
+            # else: no button for already-ok
+
+    def _install_single(self, name: str):
+        """Install a single dependency."""
+        from installers import NpmInstaller, WingetInstaller, DirectInstaller, BundledInstaller
+
+        # Find the row button and disable it
+        for w in self._row_button_frame.winfo_children():
+            if isinstance(w, ttk.Button) and w.cget("text") == "安装":
+                pass  # We'll handle via name matching below
+
+        self._set_status(f"正在安装 {name}...")
+        self.detect_btn.configure(state="disabled")
+
+        def _install():
+            installers = []
+            if name in ("npm", "Node.js", "Claude Code"):
+                installers.append(NpmInstaller())
+            installers.append(BundledInstaller(name))
+            installers.append(WingetInstaller(name))
+            installers.append(DirectInstaller(name))
+
+            success = False
+            for installer in installers:
+                try:
+                    if installer.install(None):
+                        success = True
+                        break
+                except Exception:
+                    pass
+
+            if success:
+                self.root.after(0, lambda: self._set_status(f"{name} 安装成功"))
+            else:
+                self.root.after(0, lambda: self._set_status(f"{name} 安装失败"))
+
+            self.root.after(0, lambda: self.detect_btn.configure(state="normal"))
+            self.root.after(1500, lambda: self._auto_detect())
+
+        threading.Thread(target=_install, daemon=True).start()
 
     # ── Installation ───────────────────────────────────────
 
@@ -420,27 +491,9 @@ class InstallerApp:
 
         self._do_install(missing)
 
-    def _download_and_install(self):
-        """Download and install all missing dependencies, including downloading bundled installers."""
-        missing = [(n, s, d) for n, s, d in self.results
-                    if (s.value if hasattr(s, 'value') else str(s).lower()) in ("missing", "warning")]
-        if not missing:
-            self._set_status("所有组件已安装完毕")
-            return
-
-        names = [n for n, _, _ in missing]
-        if not messagebox.askokcancel("确认下载并安装",
-                f"即将下载并安装以下组件：\n\n" + "\n".join(f"  · {n}" for n in names) +
-                "\n\n（如果网络不可用，将尝试使用已捆绑的离线安装包）"):
-            return
-
-        self._do_install(missing)
-
     def _do_install(self, missing):
         """Run the install process."""
-        self.install_btn.configure(state="disabled")
         self.detect_btn.configure(state="disabled")
-        self.download_install_btn.configure(state="disabled")
         self._set_status("正在安装，请稍候...")
 
         threading.Thread(target=self._run_install, args=(missing,), daemon=True).start()
@@ -473,11 +526,8 @@ class InstallerApp:
             if not success:
                 self.root.after(0, lambda n=name: self._set_status(f"{n} 安装失败"))
 
-        # Refresh after install
         self.root.after(0, lambda: self._set_status("安装完成，正在重新检测..."))
-        self.root.after(0, lambda: self.install_btn.configure(state="normal"))
         self.root.after(0, lambda: self.detect_btn.configure(state="normal"))
-        self.root.after(0, lambda: self.download_install_btn.configure(state="normal"))
         self.root.after(1000, lambda: self._auto_detect())
 
 
