@@ -9,11 +9,17 @@ hidden = (
     + collect_submodules('utils')
 )
 
+# PIL is lazy-imported; only the submodules we actually use
+hidden += ['PIL', 'PIL.Image', 'PIL.GifImagePlugin']
+
 a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=[
+        ("bundled", "bundled"),
+        ("assets", "assets"),
+    ],
     hiddenimports=hidden,
     hookspath=[],
     hooksconfig={},
