@@ -186,19 +186,16 @@ class InstallerApp:
                                      "assets", "dog_running.gif")
         self.dog_frames = []
         if os.path.exists(dog_gif_path):
+            from PIL import Image as PILImage
+            pil_img = PILImage.open(dog_gif_path)
+            n_frames = getattr(pil_img, 'n_frames', 1)
             self.dog_gif = tk.PhotoImage(file=dog_gif_path)
-            # Extract all frames
-            try:
-                idx = 0
-                while True:
-                    frame = self.dog_gif.copy()
-                    frame.configure(format=f"gif -index {idx}")
-                    self.dog_frames.append(frame)
-                    idx += 1
-            except Exception:
-                self.dog_frames = [self.dog_gif]
+            for idx in range(n_frames):
+                frame = self.dog_gif.copy()
+                frame.configure(format=f"gif -index {idx}")
+                self.dog_frames.append(frame)
         else:
-            self.dog_frames = [None]
+            self.dog_frames = []
             self.dog_gif = None
 
         self.dog_label = tk.Label(progress_frame, bg=BG, image=self.dog_frames[0] if self.dog_frames[0] else None)
