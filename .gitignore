@@ -7,7 +7,7 @@ __pycache__/
 build/
 dist/
 dist_new/
-bundled/
+bundled/.pytest_cache/
 installer.log
 *.egg-info/
 .eggs/
