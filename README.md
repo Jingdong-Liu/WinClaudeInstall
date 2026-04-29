@@ -29,6 +29,9 @@ build.bat
 
 Output: `dist\ClaudeCodeInstaller\ClaudeCodeInstaller.exe`
 
+### GUI progran
+<img width="883" height="649" alt="image" src="https://github.com/user-attachments/assets/c171c155-4cdc-4903-9bf9-4943ce71e896" />
+
 ## Architecture
 
 ```
