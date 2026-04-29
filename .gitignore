@@ -1,9 +1,13 @@
+.claude/
+.superpowers/
 __pycache__/
 *.pyc
 *.pyo
 *.spec.bak
 build/
 dist/
+dist_new/
+bundled/
 installer.log
 *.egg-info/
 .eggs/

@@ -27,6 +27,15 @@ if errorlevel 1 (
     exit /b 1
 )
 
+echo [2.5] Checking bundled installers...
+if exist bundled (
+    echo Bundled installers found:
+    dir /b bundled 2>nul | findstr /v "^$" || echo   ^(directory empty^)
+) else (
+    echo WARNING: bundled/ directory not found. Offline installers will not be available.
+)
+echo.
+
 echo [3/4] Cleaning previous builds...
 if exist build rd /s /q build
 if exist dist rd /s /q dist
